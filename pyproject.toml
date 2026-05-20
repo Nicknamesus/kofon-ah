@@ -1,0 +1,56 @@
+[project]
+name = "kofon-chatbot-hardcoded"
+version = "0.4.0"
+description = "Kofon chatbot — single-process bundled build (widget + FastAPI backend served from one origin)."
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "sqlalchemy[asyncio]>=2.0.36",
+  "asyncpg>=0.30",
+  "alembic>=1.14",
+  "pydantic>=2.9",
+  "pydantic-settings>=2.6",
+  "pyyaml>=6.0",
+  # ---- Phase 2: agent (LangGraph + DeepSeek) ----
+  # DeepSeek instead of Anthropic/OpenAI because Kofon is in China — see
+  # memory/project-china-llm-constraint.md for the why.
+  "langchain>=0.3",
+  "langchain-core>=0.3",
+  "langgraph>=0.2",
+  "langchain-deepseek>=0.1",
+  # Checkpointer writes graph state to Postgres between nodes so sessions
+  # can resume. Uses psycopg async; coexists fine with the asyncpg driver
+  # SQLAlchemy already uses for app code.
+  "langgraph-checkpoint-postgres>=2.0",
+  "psycopg[binary,pool]>=3.2",
+  # ---- Phase 3: embeddings ----
+  # pgvector SQLAlchemy adapter for the `vector(1024)` column type. The
+  # Postgres extension itself ships in `pgvector/pgvector:pg16`.
+  "pgvector>=0.3",
+  # Used by the DashScope embeddings provider. BGE-M3 (sentence-transformers)
+  # stays an opt-in install — see `app/embeddings.py`.
+  "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = [
+  "ruff>=0.7",
+  "pytest>=8.3",
+  "pytest-asyncio>=0.24",
+  "httpx>=0.27",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
