@@ -45,6 +45,7 @@ divisions:
 # Map product family → division. Used as the second key in routes.
 families:
   caesarplanetary: planetary
+  r_series: planetary
   rollsate: roller_screw
   elitewave: harmonic
   servolux: linear
