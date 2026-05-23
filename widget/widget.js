@@ -71,6 +71,7 @@
     gate_no:           { EN: "No",                  DE: "Nein",                    KO: "아니요",                ZH: "否" },
     are_these_helpful: { EN: "Are these results helpful?", DE: "Sind diese Treffer hilfreich?", KO: "이 결과가 도움이 되었나요?", ZH: "这些结果对您有帮助吗?" },
     datasheet_label:   { EN: "Datasheet",           DE: "Datenblatt",              KO: "데이터시트",             ZH: "数据手册" },
+    view_product:      { EN: "View product",        DE: "Produkt ansehen",         KO: "제품 보기",              ZH: "查看产品" },
     back_to_menu:      { EN: "Back to menu",        DE: "Zurück zum Menü",         KO: "메뉴로 돌아가기",         ZH: "返回菜单" },
     type_placeholder:  { EN: "Type your question…", DE: "Geben Sie Ihre Frage ein…", KO: "질문을 입력하세요…",     ZH: "请输入您的问题…" },
   };
@@ -628,15 +629,20 @@
 
     _renderRecommendationsCard(payload) {
       const recs = payload.recommendations || [];
-      const rows = recs.map(r => `
+      const rows = recs.map(r => {
+        const link = r.product_page_url
+          ? `<a class="aiagent-card-cta" href="${r.product_page_url}" target="_blank" rel="noopener">${_t(this, "view_product")} ${ICON.arrow}</a>`
+          : "";
+        return `
         <div class="aiagent-product-row">
           <div class="aiagent-product-row-main">
             <strong>${_escapeHtml(r.name || "")}</strong>
             <span class="aiagent-product-row-meta">fit ${r.fit_score}/5 · ${_escapeHtml(r.family || "")}</span>
             <span class="aiagent-product-row-name">${_escapeHtml(r.rationale || "")}</span>
           </div>
-        </div>
-      `).join("");
+          ${link}
+        </div>`;
+      }).join("");
       return this.addCard(`
         <div class="aiagent-card aiagent-product-results">
           <p class="aiagent-card-title">${_escapeHtml(payload.title || _t(this, "recommended_families"))}</p>

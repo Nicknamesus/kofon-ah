@@ -191,7 +191,8 @@ def _format_results(results: list[ProductOut], lang: str | None) -> str:
         if backlash is not None:
             bits.append(f"{backlash} arcmin backlash")
         detail = ", ".join(bits) if bits else r.family or ""
-        lines.append(f"  - {r.sku} ({r.name}) — {detail}")
+        link = f"\n    {r.datasheet_url}" if r.datasheet_url else ""
+        lines.append(f"  - {r.sku} ({r.name}) — {detail}{link}")
     lines.append("\n" + t("gf_do_any_fit", lang))
     return "\n".join(lines)
 

@@ -147,7 +147,7 @@ async def run(state: AgentState) -> dict:
             )
 
         if fallback is not None:
-            family_code, family_name, family_desc, rationale = fallback
+            family_code, family_name, family_desc, rationale, page_url = fallback
             summary = t(
                 "pfo_no_curated_fit",
                 lang,
@@ -181,6 +181,7 @@ async def run(state: AgentState) -> dict:
                                     "name": family_name,
                                     "family": family_name,
                                     "description": family_desc,
+                                    "product_page_url": page_url,
                                     "fit_score": 3,
                                     "rationale": rationale,
                                 }
@@ -339,8 +340,8 @@ async def _llm_pick_family(
     industry: str,
     application: str,
     lang: str | None = None,
-) -> tuple[str, str, str, str] | None:
-    """If the LLM picks a real family, return (code, name, description, rationale)."""
+) -> tuple[str, str, str, str, str | None] | None:
+    """If the LLM picks a real family, return (code, name, description, rationale, product_page_url)."""
 
     rows = (
         await session.execute(
@@ -349,6 +350,7 @@ async def _llm_pick_family(
                 ProductType.name,
                 ProductType.family,
                 ProductType.description,
+                ProductType.product_page_url,
             )
         )
     ).all()
@@ -357,7 +359,7 @@ async def _llm_pick_family(
 
     families_block = "\n".join(
         f"- `{code}` — {name} ({family}): {desc}"
-        for code, name, family, desc in rows
+        for code, name, family, desc, _url in rows
     )
 
     llm = get_chat_llm(temperature=0).with_structured_output(_FamilyPick)
@@ -374,8 +376,8 @@ async def _llm_pick_family(
         return None
 
     # Validate the LLM didn't hallucinate a code.
-    for code, name, _family, desc in rows:
+    for code, name, _family, desc, page_url in rows:
         if code == pick.family_code:
-            return code, name, desc, pick.rationale or "Closest fit in our current catalog."
+            return code, name, desc, pick.rationale or "Closest fit in our current catalog.", page_url
 
     return None
