@@ -26,15 +26,15 @@ from __future__ import annotations
 
 from typing import Any
 
-from langchain_core.messages import AIMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
-from app.agent.llm import get_chat_llm
+from app.agent.llm import get_chat_llm, system_message
 from app.agent.state import AgentState
 from app.db import SessionLocal
-from app.i18n import language_instruction, t
-from app.models import ProductType
+from app.i18n import t
+from app.models import ProductType, has_active_products
 from app.tools import build_custom_config
 
 MIN_FILLED = 2
@@ -84,20 +84,33 @@ async def run(state: AgentState) -> dict:
             # No family in scope yet — but if the catalog only has one,
             # picking it for the user is much friendlier than asking.
             all_families = (
-                await session.execute(select(ProductType))
+                await session.execute(
+                    select(ProductType).where(ProductType.id.in_(has_active_products()))
+                )
             ).scalars().all()
             if len(all_families) == 1:
                 family = all_families[0]
 
     if family is None:
-        # Genuinely ambiguous — multiple families and none chosen. Ask,
-        # showing a couple of real family names from the catalog so the
-        # user has concrete options to pick from instead of "give us
-        # any family code."
+        # If we already asked and the user replied, try to resolve from text.
+        if customize.get("phase") == "collecting":
+            family = await _resolve_family_from_conversation(
+                state.get("messages", []), lang
+            )
+            if family is not None:
+                schema = family.spec_schema or {}
+                return _form_card(
+                    family, schema, {},
+                    {**customize, "family_code": family.code}, lang,
+                )
+
+    if family is None:
         async with SessionLocal() as session:
             examples = (
                 await session.execute(
-                    select(ProductType.name).order_by(ProductType.code).limit(3)
+                    select(ProductType.name)
+                    .where(ProductType.id.in_(has_active_products()))
+                    .order_by(ProductType.code).limit(3)
                 )
             ).scalars().all()
         example_block = (
@@ -117,24 +130,40 @@ async def run(state: AgentState) -> dict:
         }
 
     schema = family.spec_schema or {}
-    schema_block = _format_schema(schema)
     existing_modules = dict(customize.get("modules") or {})
 
+    # --- Fast path: structured form submission from the widget -----------
+    submitted = slots.get("custom_modules_submitted")
+    if submitted is not None:
+        merged = {k: v for k, v in submitted.items() if k in schema and v is not None}
+        if sum(1 for v in merged.values() if v is not None) >= 1:
+            return await _build_and_present(
+                family, {**existing_modules, **merged}, customize, lang,
+            )
+        # Empty form submitted — re-show the form
+        return _form_card(family, schema, existing_modules, customize, lang)
+
+    # --- First visit with a known family: show the structured form ------
+    if customize.get("phase") not in ("form_shown", "collecting"):
+        return _form_card(family, schema, existing_modules, customize, lang)
+
+    # --- Conversational fallback: user typed text after form was shown ---
+    schema_block = _format_schema(schema)
     llm = get_chat_llm(temperature=0).with_structured_output(_Extraction)
     extraction: _Extraction = await llm.ainvoke(
         [
-            SystemMessage(
-                content=SYSTEM_TEMPLATE.format(
+            system_message(
+                SYSTEM_TEMPLATE.format(
                     family_name=family.name,
                     schema_block=schema_block,
                     min_filled=MIN_FILLED,
-                ) + language_instruction(lang)
+                ),
+                lang,
             ),
             *state.get("messages", []),
         ]
     )
 
-    # Merge: existing values stand unless the LLM extracted a non-null override.
     merged: dict[str, Any] = {**existing_modules}
     for key, value in (extraction.modules or {}).items():
         if key in schema and value is not None:
@@ -161,6 +190,57 @@ async def run(state: AgentState) -> dict:
             "current_node": "guide.customize.collecting",
         }
 
+    return await _build_and_present(family, merged, customize, lang)
+
+
+def _form_card(
+    family, schema: dict, existing_modules: dict, customize: dict, lang: str | None
+) -> dict:
+    """Emit a ``custom_config_form`` card so the widget renders a structured form."""
+    fields: list[dict] = []
+    for key, meta in schema.items():
+        meta = meta or {}
+        field: dict[str, Any] = {
+            "key": key,
+            "label": meta.get("label") or key,
+            "type": meta.get("type", "string"),
+        }
+        if "enum" in meta:
+            field["enum"] = meta["enum"]
+        if key in existing_modules and existing_modules[key] is not None:
+            field["value"] = existing_modules[key]
+        fields.append(field)
+
+    return {
+        "messages": [
+            AIMessage(content=t("gc_form_intro", lang, family_name=family.name))
+        ],
+        "cards": [
+            {
+                "kind": "custom_config_form",
+                "payload": {
+                    "family_code": family.code,
+                    "family_name": family.name,
+                    "fields": fields,
+                },
+            }
+        ],
+        "slots": {
+            "customize": {
+                **customize,
+                "family_code": family.code,
+                "phase": "form_shown",
+            },
+            "custom_modules_submitted": None,
+        },
+        "current_node": "guide.customize.form_shown",
+    }
+
+
+async def _build_and_present(
+    family, merged: dict, customize: dict, lang: str | None
+) -> dict:
+    """Call ``build_custom_config`` and emit the result + quote gate."""
     async with SessionLocal() as session:
         config = await build_custom_config(
             session, family_code=family.code, modules=merged
@@ -202,9 +282,7 @@ async def run(state: AgentState) -> dict:
                 "modules": merged,
                 "phase": "presented",
             },
-            # Reuse the happy-gate verdict path: 'happy=true' → outcome_sell
-            # (RFQ), 'happy=false' → outcome_human. find_phase signals the
-            # graph dispatcher that the next user reply should hit the gate.
+            "custom_modules_submitted": None,
             "find_phase": "presented",
             "candidates": [
                 {
@@ -236,3 +314,74 @@ def _format_schema(schema: dict) -> str:
         tail = f" — one of {enum}" if enum else ""
         lines.append(f"  - {key}: {label}{tail}")
     return "\n".join(lines)
+
+
+_FAMILY_PICK_SYSTEM = """Pick the product family the user is asking about.
+
+Available families:
+{families_block}
+
+Return the exact `code` value from the list above. If no family
+clearly matches, set code to null.
+"""
+
+
+class _FamilyChoice(BaseModel):
+    code: str | None = Field(description="Exact family code, or null if unclear.")
+
+
+async def _resolve_family_from_conversation(
+    messages: list, lang: str | None
+) -> ProductType | None:
+    """Try to match the user's latest message to a product family."""
+    last_human = next(
+        (m for m in reversed(messages) if isinstance(m, HumanMessage)), None
+    )
+    if last_human is None:
+        return None
+    text = (last_human.content or "").strip().lower()
+    if not text:
+        return None
+
+    async with SessionLocal() as session:
+        all_families = (
+            await session.execute(
+                select(ProductType).where(ProductType.id.in_(has_active_products()))
+            )
+        ).scalars().all()
+
+    if not all_families:
+        return None
+
+    # Fast path: exact code or case-insensitive name match.
+    for f in all_families:
+        if text == f.code or text == f.name.lower():
+            return f
+    # Partial match — only use if exactly one family matches, otherwise
+    # fall through to the LLM which can disambiguate.
+    partial = [
+        f for f in all_families
+        if f.code in text or text in f.code
+        or text in f.name.lower() or f.name.lower() in text
+    ]
+    if len(partial) == 1:
+        return partial[0]
+
+    # LLM fallback: handles ambiguous input like "harmonic gear" (10+ families).
+    families_block = "\n".join(
+        f"- `{f.code}` — {f.name} ({f.family})" for f in all_families
+    )
+    llm = get_chat_llm(temperature=0).with_structured_output(_FamilyChoice)
+    pick: _FamilyChoice = await llm.ainvoke(
+        [
+            system_message(
+                _FAMILY_PICK_SYSTEM.format(families_block=families_block), lang
+            ),
+            last_human,
+        ]
+    )
+    if pick.code:
+        for f in all_families:
+            if f.code == pick.code:
+                return f
+    return None

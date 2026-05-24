@@ -102,6 +102,27 @@ _T: dict[str, dict[str, str]] = {
         "KO": "아니요, 맞는 게 없어요",
         "ZH": "都不合适",
     },
+    "gate_just_browsing": {
+        "EN": "I just needed the info, thanks",
+        "DE": "Ich brauchte nur die Info, danke",
+        "KO": "정보만 필요했어요, 감사합니다",
+        "ZH": "我只需要了解一下,谢谢",
+    },
+    "ghg_glad_helped": {
+        "EN": "Great, glad I could help! Feel free to come back anytime "
+              "if you need a quote or have questions.",
+        "DE": "Freut mich, dass ich helfen konnte! Kommen Sie gerne "
+              "jederzeit zurück für ein Angebot oder bei Fragen.",
+        "KO": "도움이 되어 기쁩니다! 견적이 필요하거나 질문이 있으시면 "
+              "언제든 다시 찾아주세요.",
+        "ZH": "很高兴能帮到您！如果需要报价或有任何问题,随时欢迎再来。",
+    },
+    "title_glad_helped": {
+        "EN": "Glad I could help",
+        "DE": "Gerne geholfen",
+        "KO": "도움이 되어 기쁩니다",
+        "ZH": "很高兴帮到您",
+    },
 
     # ----- guide.customize -----
     "gc_which_family": {
@@ -145,6 +166,18 @@ _T: dict[str, dict[str, str]] = {
               "않다면 여기서 출발할 수도 있습니다.",
         "ZH": "\n\n最接近的标准 SKU: **{sku}** — 如果不一定要定制,"
               "也可以从这一型号入手。",
+    },
+    "gc_form_intro": {
+        "EN": "Here's the configuration form for **{family_name}**. "
+              "Fill in the specs you care about and hit submit — "
+              "I'll find the closest match.",
+        "DE": "Hier ist das Konfigurationsformular für **{family_name}**. "
+              "Tragen Sie die gewünschten Werte ein und klicken Sie auf "
+              "Absenden — ich finde das passendste Produkt.",
+        "KO": "**{family_name}** 구성 양식입니다. 원하시는 사양을 입력하고 "
+              "제출을 누르시면 가장 가까운 제품을 찾아 드리겠습니다.",
+        "ZH": "这是 **{family_name}** 的配置表单。填写您关心的参数后点击提交,"
+              "我会为您找到最接近的匹配产品。",
     },
     "gc_quote_question": {
         "EN": "Send this to sales for a quote?",

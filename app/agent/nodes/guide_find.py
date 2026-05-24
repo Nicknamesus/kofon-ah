@@ -22,16 +22,16 @@ from __future__ import annotations
 
 from typing import Any
 
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.agent.llm import get_chat_llm
+from app.agent.llm import get_chat_llm, system_message
 from app.agent.state import AgentState
 from app.db import SessionLocal
-from app.i18n import language_instruction, t
-from app.models import ProductType
+from app.i18n import t
+from app.models import ProductType, has_active_products
 from app.schemas.tools import ProductOut, SearchProductsFilters
 from app.tools import search_products
 
@@ -67,9 +67,9 @@ async def _build_system_prompt(session: AsyncSession) -> str:
     SystemMessage that the LLM caches across turns anyway."""
     rows = (
         await session.execute(
-            select(ProductType.code, ProductType.name, ProductType.family).order_by(
-                ProductType.code
-            )
+            select(ProductType.code, ProductType.name, ProductType.family)
+            .where(ProductType.id.in_(has_active_products()))
+            .order_by(ProductType.code)
         )
     ).all()
     if not rows:
@@ -96,13 +96,12 @@ async def run(state: AgentState) -> dict:
     # which family codes are valid. Short-lived session — released before
     # the LLM call so we don't hold a pool connection during the slow hop.
     async with SessionLocal() as session:
-        system_prompt = await _build_system_prompt(session)
-    system_prompt += language_instruction(lang)
+        prompt_content = await _build_system_prompt(session)
 
     # Extract filters from the full conversation so the LLM sees prior turns.
     llm = get_chat_llm().with_structured_output(_Extraction)
     extraction: _Extraction = await llm.ainvoke(
-        [SystemMessage(content=system_prompt), *messages]
+        [system_message(prompt_content, lang), *messages]
     )
 
     # Merge: existing filters (e.g. seeded by presales) win unless the LLM
@@ -170,6 +169,7 @@ async def run(state: AgentState) -> dict:
                     "question": t("gf_do_any_fit", lang),
                     "yes_label": t("gate_yes_works", lang),
                     "no_label": t("gate_no_fit", lang),
+                    "dismiss_label": t("gate_just_browsing", lang),
                 },
             },
         ],

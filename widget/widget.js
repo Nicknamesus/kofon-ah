@@ -74,6 +74,13 @@
     view_product:      { EN: "View product",        DE: "Produkt ansehen",         KO: "제품 보기",              ZH: "查看产品" },
     back_to_menu:      { EN: "Back to menu",        DE: "Zurück zum Menü",         KO: "메뉴로 돌아가기",         ZH: "返回菜单" },
     type_placeholder:  { EN: "Type your question…", DE: "Geben Sie Ihre Frage ein…", KO: "질문을 입력하세요…",     ZH: "请输入您的问题…" },
+    config_form_title: { EN: "Configure {family}",  DE: "{family} konfigurieren",   KO: "{family} 구성",           ZH: "配置 {family}" },
+    config_submit:     { EN: "Find closest match",  DE: "Nächstes Produkt finden",  KO: "가장 가까운 제품 찾기",     ZH: "查找最接近的产品" },
+    config_request_custom: { EN: "Request a custom part", DE: "Sonderfertigung anfragen", KO: "맞춤 부품 요청", ZH: "申请定制零件" },
+    config_optional:   { EN: "All fields optional — fill in what you know.", DE: "Alle Felder optional — tragen Sie ein, was Sie wissen.", KO: "모든 필드 선택 사항 — 아는 값만 입력하세요.", ZH: "所有字段均为选填 — 填写您已知的参数即可。" },
+    feature_in_dev:    { EN: "This feature is currently in development. In the meantime, feel free to ask me anything else or <strong>talk to one of our engineers</strong> directly.", DE: "Diese Funktion befindet sich derzeit in Entwicklung. In der Zwischenzeit können Sie mir gerne andere Fragen stellen oder <strong>direkt mit einem unserer Ingenieure sprechen</strong>.", KO: "이 기능은 현재 개발 중입니다. 그동안 다른 질문을 해 주시거나 <strong>엔지니어와 직접 대화</strong>하실 수 있습니다.", ZH: "此功能正在开发中。您可以先问我其他问题,或<strong>直接联系我们的工程师</strong>。" },
+    expo_followup:     { EN: "Thanks for visiting us! This feature is still being built — for now, please tell me what you're looking for and I'll help from here, or I can <strong>connect you with the engineer you spoke to</strong>.", DE: "Vielen Dank für Ihren Besuch! Diese Funktion wird noch entwickelt. Beschreiben Sie mir, was Sie suchen, oder ich <strong>verbinde Sie mit dem Ingenieur, mit dem Sie gesprochen haben</strong>.", KO: "방문해 주셔서 감사합니다! 이 기능은 아직 개발 중입니다. 찾으시는 것을 말씀해 주시면 도와드리겠습니다. 또는 <strong>대화하셨던 엔지니어에게 연결</strong>해 드릴 수도 있습니다.", ZH: "感谢您的来访！此功能仍在开发中。请告诉我您在寻找什么,我来帮您,或者我可以<strong>为您转接您之前交流过的工程师</strong>。" },
+    datasheet_answer:  { EN: "I can help you find a datasheet. Tell me which product family or SKU you're interested in and I'll point you to the right page.", DE: "Ich kann Ihnen helfen, ein Datenblatt zu finden. Sagen Sie mir, welche Produktfamilie oder SKU Sie interessiert, und ich leite Sie zur richtigen Seite.", KO: "데이터시트를 찾아 드리겠습니다. 관심 있는 제품군이나 SKU를 알려주시면 해당 페이지로 안내해 드리겠습니다.", ZH: "我可以帮您找到数据手册。请告诉我您感兴趣的产品系列或 SKU,我会指引您到正确的页面。" },
   };
   function _t(widget, key) {
     const lang = (widget && widget.state && widget.state.language) || "EN";
@@ -495,6 +502,27 @@
         global.AIAgentAPI.resetSession();
       }
 
+      // --- Quick-tool fast paths (no backend round-trip needed) -----------
+      if (name === "leadtime") {
+        const text = (opts && opts.seed) || "(hi)";
+        this.addUserMessage(text);
+        this.addBotMessage(_t(this, "feature_in_dev"));
+        return;
+      }
+      if (name === "expo") {
+        const text = (opts && opts.seed) || "We met at an expo.";
+        this.addUserMessage(text);
+        this.addBotMessage(_t(this, "expo_followup"));
+        return;
+      }
+      if (name === "datasheet") {
+        const text = (opts && opts.seed) || "I need a product datasheet.";
+        this.addUserMessage(text);
+        this.addBotMessage(_t(this, "datasheet_answer"));
+        return;
+      }
+
+      // --- Standard backend-routed flows ----------------------------------
       // The primary flows have a router-friendly seed; secondary
       // utilities pass through whatever the chip implied. Seeds are
       // localized so a Chinese user's first visible bubble reads in
@@ -505,34 +533,45 @@
           guide:     "I know roughly what I need — help me find products.",
           postsales: "I have a problem with a product I own.",
           other:     "I have a question.",
+          human:     "Connect me with a human engineer.",
         },
         DE: {
           presales:  "Ich möchte herausfinden, was zu meiner Anwendung passt.",
           guide:     "Ich weiß ungefähr, was ich brauche — helfen Sie mir, Produkte zu finden.",
           postsales: "Ich habe ein Problem mit einem Produkt, das ich besitze.",
           other:     "Ich habe eine Frage.",
+          human:     "Verbinden Sie mich mit einem Ingenieur.",
         },
         KO: {
           presales:  "제 응용 분야에 맞는 제품을 살펴보고 싶어요.",
           guide:     "필요한 게 대략 정해져 있어요 — 제품을 찾아 주세요.",
           postsales: "구매한 제품에 문제가 있어요.",
           other:     "질문이 하나 있어요.",
+          human:     "엔지니어와 연결해 주세요.",
         },
         ZH: {
           presales:  "我想了解一下适合我应用的产品。",
           guide:     "我大致知道需要什么 — 帮我找一下产品。",
           postsales: "我购买的产品出了问题。",
           other:     "我有一个问题。",
+          human:     "请帮我转接人工工程师。",
         },
       };
       const seedByFlow = seedsByLang[this.state.language] || seedsByLang.EN;
       const text = (opts && opts.seed) || seedByFlow[name] || "(hi)";
-      const apiFlow = (name === "presales" || name === "guide"
+      let apiFlow = (name === "presales" || name === "guide"
         || name === "postsales" || name === "other") ? name : undefined;
       const subflow = opts && opts.subflow ? opts.subflow : undefined;
+      const extra = {};
+
+      // "Talk to a human" fast lane — routes directly to outcome_human.
+      if (name === "human") {
+        apiFlow = "other";
+        extra.force_human = true;
+      }
 
       this.addUserMessage(text);
-      this._streamFromApi({ text, flow: apiFlow, subflow, language: this.state.language });
+      this._streamFromApi({ text, flow: apiFlow, subflow, ...extra, language: this.state.language });
     }
 
     /* ----- Stream a turn through the backend. ----- */
@@ -587,6 +626,7 @@
         if (kind === "outcome")             return this._renderOutcomeCard(payload);
         if (kind === "problem_candidates")  return this._renderProblemCandidatesCard(payload);
         if (kind === "problem_match")       return this._renderProblemMatchCard(payload);
+        if (kind === "custom_config_form")  return this._renderCustomConfigFormCard(payload);
         console.warn("AIAgent: unknown card kind", kind, payload);
         return;
       }
@@ -606,8 +646,10 @@
         if (specs.nominal_torque_nm != null) bits.push(`${specs.nominal_torque_nm} Nm`);
         if (specs.backlash_arcmin != null) bits.push(`${specs.backlash_arcmin} arcmin`);
         const detail = bits.join(" · ");
-        const datasheet = r.datasheet_url
+        const link = r.datasheet_url
           ? `<a class="aiagent-card-cta" href="${r.datasheet_url}" target="_blank" rel="noopener">${_t(this, "datasheet_label")} ${ICON.arrow}</a>`
+          : r.product_page_url
+          ? `<a class="aiagent-card-cta" href="${r.product_page_url}" target="_blank" rel="noopener">${_t(this, "view_product")} ${ICON.arrow}</a>`
           : "";
         return `
           <div class="aiagent-product-row">
@@ -616,7 +658,7 @@
               <span class="aiagent-product-row-name">${_escapeHtml(r.name || "")}</span>
               <span class="aiagent-product-row-meta">${_escapeHtml(detail)}</span>
             </div>
-            ${datasheet}
+            ${link}
           </div>`;
       }).join("");
       return this.addCard(`
@@ -656,6 +698,7 @@
         title: payload.question || _t(this, "are_these_helpful"),
         yesLabel: payload.yes_label || _t(this, "gate_yes"),
         noLabel:  payload.no_label  || _t(this, "gate_no"),
+        dismissLabel: payload.dismiss_label || null,
         onYes: () => {
           this.addUserMessage(payload.yes_label || _t(this, "gate_yes"));
           this._streamFromApi({ gate_choice: "yes", language: this.state.language });
@@ -664,6 +707,10 @@
           this.addUserMessage(payload.no_label || _t(this, "gate_no"));
           this._streamFromApi({ gate_choice: "no", language: this.state.language });
         },
+        onDismiss: payload.dismiss_label ? () => {
+          this.addUserMessage(payload.dismiss_label);
+          this._streamFromApi({ gate_choice: "info_only", language: this.state.language });
+        } : null,
       });
     }
 
@@ -723,6 +770,126 @@
           ${stepHtml}
         </div>
       `);
+    }
+
+    _renderCustomConfigFormCard(payload) {
+      const fields = payload.fields || [];
+      const familyName = _escapeHtml(payload.family_name || "");
+      const title = _t(this, "config_form_title").replace("{family}", familyName);
+      const hint = _t(this, "config_optional");
+
+      // Split fields: enum fields first (quick to fill), then inputs.
+      const enumFields = fields.filter(f => f.enum && f.enum.length);
+      const inputFields = fields.filter(f => !f.enum || !f.enum.length);
+      const ordered = [...enumFields, ...inputFields];
+
+      const fieldHtml = ordered.map(f => {
+        const key = _escapeHtml(f.key);
+        const label = _escapeHtml(f.label || f.key);
+        const existing = f.value != null ? f.value : "";
+
+        if (f.enum && f.enum.length) {
+          const pills = f.enum.map(v => {
+            const sv = _escapeHtml(String(v));
+            const sel = String(v) === String(existing) ? ' data-selected="true"' : "";
+            return `<button type="button" class="aiagent-radio-pill" data-key="${key}" data-value="${sv}"${sel}>${sv}</button>`;
+          }).join("");
+          return `
+            <div class="aiagent-field" data-field-key="${key}">
+              <span class="aiagent-field-label">${label}</span>
+              <div class="aiagent-radio-group">${pills}</div>
+            </div>`;
+        }
+
+        const inputType = (f.type === "integer" || f.type === "number") ? "number" : "text";
+        const step = f.type === "number" ? ' step="any"' : "";
+        const val = existing !== "" ? ` value="${_escapeHtml(String(existing))}"` : "";
+        return `
+          <div class="aiagent-field" data-field-key="${key}">
+            <span class="aiagent-field-label">${label}</span>
+            <input class="aiagent-field-input" type="${inputType}"${step}${val}
+                   data-key="${key}" placeholder="—">
+          </div>`;
+      }).join("");
+
+      // Pair narrow numeric inputs two-per-row where possible.
+      const card = this.addCard(`
+        <div class="aiagent-card aiagent-config-form">
+          <p class="aiagent-card-title">${ICON.gear} ${title}</p>
+          <p class="aiagent-card-hint" style="margin-bottom:10px">${hint}</p>
+          ${fieldHtml}
+          <button class="aiagent-card-cta aiagent-config-submit" type="button">
+            ${ICON.check} ${_t(this, "config_submit")}
+          </button>
+          <button class="aiagent-card-cta aiagent-config-custom" type="button">
+            ${ICON.handoff} ${_t(this, "config_request_custom")}
+          </button>
+        </div>
+      `);
+
+      // Wire radio pills: clicking one deselects siblings.
+      $$(card, ".aiagent-radio-pill").forEach(pill => {
+        pill.addEventListener("click", () => {
+          const group = pill.parentElement;
+          $$(group, ".aiagent-radio-pill").forEach(p => p.setAttribute("data-selected", "false"));
+          pill.setAttribute("data-selected", "true");
+        });
+      });
+
+      // Collect form values from the card.
+      const collectModules = () => {
+        const modules = {};
+        $$(card, ".aiagent-radio-group").forEach(group => {
+          const sel = group.querySelector('[data-selected="true"]');
+          if (sel) {
+            const raw = sel.dataset.value;
+            const key = sel.dataset.key;
+            const field = fields.find(f => f.key === key);
+            modules[key] = (field && (field.type === "integer" || field.type === "number"))
+              ? Number(raw) : raw;
+          }
+        });
+        $$(card, ".aiagent-field-input").forEach(inp => {
+          const v = inp.value.trim();
+          if (!v) return;
+          const key = inp.dataset.key;
+          const field = fields.find(f => f.key === key);
+          modules[key] = (field && (field.type === "integer" || field.type === "number"))
+            ? Number(v) : v;
+        });
+        return modules;
+      };
+
+      const lockForm = () => {
+        $$(card, "button").forEach(b => { b.disabled = true; });
+        $$(card, "input").forEach(i => { i.disabled = true; });
+      };
+
+      const summarize = (modules) => {
+        const bits = Object.entries(modules).map(([k, v]) => {
+          const f = fields.find(x => x.key === k);
+          return `${(f && f.label) || k}: ${v}`;
+        });
+        if (bits.length) this.addUserMessage(bits.join(", "));
+      };
+
+      // "Find closest match" — sends modules to the backend for matching.
+      card.querySelector(".aiagent-config-submit").addEventListener("click", () => {
+        const modules = collectModules();
+        lockForm();
+        summarize(modules);
+        this._streamFromApi({ custom_modules: modules, language: this.state.language });
+      });
+
+      // "Request custom part" — sends modules + force_human for a handoff.
+      card.querySelector(".aiagent-config-custom").addEventListener("click", () => {
+        const modules = collectModules();
+        lockForm();
+        summarize(modules);
+        this._streamFromApi({ custom_modules: modules, force_human: true, language: this.state.language });
+      });
+
+      return card;
     }
 
     _renderOutcomeCard(payload) {
@@ -810,6 +977,9 @@
 
     /* ----- Decision-gate card (e.g. "happy?" / "easily fixable?") ----- */
     _addGate(opts) {
+      const dismissHtml = opts.dismissLabel
+        ? `<button class="aiagent-gate-dismiss" type="button">${opts.dismissLabel}</button>`
+        : "";
       const card = this.addCard(`
         <div class="aiagent-card aiagent-gate">
           <p class="aiagent-gate-title">${opts.title}</p>
@@ -818,13 +988,21 @@
             <button class="aiagent-gate-btn aiagent-gate-btn-yes" type="button">${opts.yesLabel || "Yes"}</button>
             <button class="aiagent-gate-btn aiagent-gate-btn-no"  type="button">${opts.noLabel  || "No"}</button>
           </div>
+          ${dismissHtml}
         </div>
       `);
       const yes = card.querySelector(".aiagent-gate-btn-yes");
       const no  = card.querySelector(".aiagent-gate-btn-no");
-      const lock = () => { yes.disabled = true; no.disabled = true; };
+      const dismiss = card.querySelector(".aiagent-gate-dismiss");
+      const lock = () => {
+        yes.disabled = true; no.disabled = true;
+        if (dismiss) dismiss.disabled = true;
+      };
       yes.addEventListener("click", () => { lock(); opts.onYes && opts.onYes(); });
       no .addEventListener("click", () => { lock(); opts.onNo  && opts.onNo();  });
+      if (dismiss && opts.onDismiss) {
+        dismiss.addEventListener("click", () => { lock(); opts.onDismiss(); });
+      }
       return card;
     }
 
@@ -928,7 +1106,10 @@
       },
 
       /* ------ 2. Guide ("Knows what they want, not which SKU") ------ */
-      guide() {
+      guide(opts) {
+        if (opts && opts.subflow === "customize") {
+          return this._flows._guideCustomize.call(this);
+        }
         this.addBotMessage("Great — how would you like to proceed?");
         this.addCard(`
           <div class="aiagent-card">
@@ -1028,6 +1209,7 @@
           subtitle: "I can quote the top match, send datasheets/CAD, or loop in an engineer.",
           yesLabel: "Yes — get me a quote",
           noLabel:  "Not quite — talk to an engineer",
+          dismissLabel: "I just needed the info, thanks",
           onYes: () => {
             this.addUserMessage("Yes — get me a quote");
             this._addOutcome({
@@ -1048,6 +1230,95 @@
               cta: "Confirm and send →",
             });
           },
+          onDismiss: () => {
+            this.addUserMessage("I just needed the info, thanks");
+            this.addBotMessage("Great, glad I could help! Feel free to come back anytime if you need a quote or have questions.");
+            this._addOutcome({
+              type: "resolved",
+              badge: _t(this, "badge_resolved"),
+              title: "Glad I could help",
+            });
+          },
+        });
+      },
+
+      /* ------ 2b. Guide → Customize (structured form mock) ------ */
+      _guideCustomize() {
+        this.addBotMessage("Here's the configuration form for **CaesarPlanetary**. Fill in the specs you care about and hit submit — I'll find the closest match.");
+        const form = this.addCard(`
+          <div class="aiagent-card aiagent-config-form">
+            <p class="aiagent-card-title">${ICON.gear} Configure CaesarPlanetary</p>
+            <p class="aiagent-card-hint" style="margin-bottom:10px">All fields optional — fill in what you know.</p>
+            <div class="aiagent-field" data-field-key="frame_size_mm">
+              <span class="aiagent-field-label">Frame size (mm)</span>
+              <div class="aiagent-radio-group">
+                <button type="button" class="aiagent-radio-pill" data-key="frame_size_mm" data-value="60">60</button>
+                <button type="button" class="aiagent-radio-pill" data-key="frame_size_mm" data-value="90" data-selected="true">90</button>
+                <button type="button" class="aiagent-radio-pill" data-key="frame_size_mm" data-value="140">140</button>
+              </div>
+            </div>
+            <div class="aiagent-field" data-field-key="variant">
+              <span class="aiagent-field-label">Variant (HP = low backlash, HT = high torque)</span>
+              <div class="aiagent-radio-group">
+                <button type="button" class="aiagent-radio-pill" data-key="variant" data-value="HP" data-selected="true">HP</button>
+                <button type="button" class="aiagent-radio-pill" data-key="variant" data-value="HT">HT</button>
+              </div>
+            </div>
+            <div class="aiagent-field" data-field-key="ratio">
+              <span class="aiagent-field-label">Reduction ratio (:1)</span>
+              <input class="aiagent-field-input" type="number" data-key="ratio" placeholder="—" value="10">
+            </div>
+            <div class="aiagent-field" data-field-key="nominal_torque_nm">
+              <span class="aiagent-field-label">Nominal output torque (Nm)</span>
+              <input class="aiagent-field-input" type="number" data-key="nominal_torque_nm" placeholder="—">
+            </div>
+            <button class="aiagent-card-cta aiagent-config-submit" type="button">
+              ${ICON.check} Find closest match
+            </button>
+            <button class="aiagent-card-cta aiagent-config-custom" type="button">
+              ${ICON.handoff} Request a custom part
+            </button>
+          </div>
+        `);
+        $$(form, ".aiagent-radio-pill").forEach(pill => {
+          pill.addEventListener("click", () => {
+            const group = pill.parentElement;
+            $$(group, ".aiagent-radio-pill").forEach(p => p.setAttribute("data-selected", "false"));
+            pill.setAttribute("data-selected", "true");
+          });
+        });
+        const lockForm = () => {
+          $$(form, "button").forEach(b => { b.disabled = true; });
+          $$(form, "input").forEach(i => { i.disabled = true; });
+        };
+        form.querySelector(".aiagent-config-submit").addEventListener("click", () => {
+          lockForm();
+          this.addUserMessage("Frame size: 90, Variant: HP, Ratio: 10");
+          this.addBotMessage("Here's the custom **CaesarPlanetary** build I've put together:\n\n_Custom CaesarPlanetary build with frame_size_mm=90, ratio=10, variant=HP._\n\nClosest stock SKU: **PG090-10-HP** — we could start from there if you don't need a custom.");
+          this._addGate({
+            title: "Send this to sales for a quote?",
+            yesLabel: "Yes, request a quote",
+            noLabel: "Talk to an engineer first",
+            dismissLabel: "I just needed the info, thanks",
+            onYes: () => {
+              this.addUserMessage("Yes, request a quote");
+              this._addOutcome({ type: "sell", badge: "RFQ ready", title: "Let's get you a quote", description: "A Kofon engineer will follow up with pricing within 1 business day." });
+            },
+            onNo: () => {
+              this.addUserMessage("Talk to an engineer first");
+              this._addOutcome({ type: "human", badge: "Routing to engineer", title: "I'll connect you with the right team" });
+            },
+            onDismiss: () => {
+              this.addUserMessage("I just needed the info, thanks");
+              this.addBotMessage("Great, glad I could help! Feel free to come back anytime if you need a quote or have questions.");
+              this._addOutcome({ type: "resolved", badge: _t(this, "badge_resolved"), title: "Glad I could help" });
+            },
+          });
+        });
+        form.querySelector(".aiagent-config-custom").addEventListener("click", () => {
+          lockForm();
+          this.addUserMessage("Frame size: 90, Variant: HP, Ratio: 10 — requesting custom part");
+          this._addOutcome({ type: "human", badge: "Custom request", title: "Sending your spec to engineering", description: "A Kofon engineer will review your custom configuration and reach out within 1 business day." });
         });
       },
 
