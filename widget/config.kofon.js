@@ -13,13 +13,12 @@
 (function () {
   const config = {
     /* ----- Backend wiring -----
-       Hardcoded single-process build: FastAPI serves this widget at `/`
-       and the API at `/api/*` from the SAME origin, so apiUrl is the
-       bare slash. After api.js strips the trailing slash, fetches
-       resolve to `/api/messages` (same-origin). Don't replace with a
-       fully-qualified URL — that re-opens the CORS / mixed-content
-       gotchas this bundle exists to avoid. ----- */
-    apiUrl: "/",
+       Set apiUrl to point at the FastAPI backend. With it set, the
+       widget routes all interactions through /api/messages (SSE).
+       Leave unset to render the visuals-only mock _flows. ----- */
+    /* For a public demo, swap this for a tunnel URL (e.g. cloudflared / ngrok). */
+    /* apiUrl: "https://boulder-showed-fragrance-moms.trycloudflare.com", */
+    apiUrl: "http://127.0.0.1:8001",
 
     /* ----- Branding ----- */
     primaryColor: "#132178",     // Kofon navy (matches site CSS)
@@ -40,6 +39,9 @@
     languages: [
       { code: "EN", label: "English", flag: "🇬🇧" },
       { code: "DE", label: "Deutsch", flag: "🇩🇪" },
+      { code: "FR", label: "Français", flag: "🇫🇷" },
+      { code: "RU", label: "Русский", flag: "🇷🇺" },
+      { code: "JA", label: "日本語", flag: "🇯🇵" },
       { code: "KO", label: "한국어", flag: "🇰🇷" },
       { code: "ZH", label: "中文", flag: "🇨🇳" },
     ],
@@ -114,7 +116,7 @@
     ],
 
     /* ----- Footer trust strip ----- */
-    footerNote: 'ISO 9001:2015 certified  ·  EN / DE / KO / ZH support  ·  <a href="#">Privacy</a>',
+    footerNote: 'ISO 9001:2015 certified  ·  EN / DE / FR / RU / JA / KO / ZH support  ·  <a href="#">Privacy</a>',
   };
 
   // Boot the widget when the DOM is ready

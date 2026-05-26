@@ -48,6 +48,15 @@
     color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500;
   }
   .nav-links a:hover { color: var(--kofon-navy); }
+  .nav-right { display: flex; align-items: center; gap: 14px; }
+  .lang-switch {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 5px 10px; border-radius: 6px;
+    font-size: 13px; font-weight: 600; color: var(--ink-muted);
+    border: 1px solid var(--line); background: #fff;
+    text-decoration: none; transition: border-color .15s;
+  }
+  .lang-switch:hover { border-color: var(--kofon-navy); color: var(--kofon-navy); }
   .nav-cta {
     background: var(--kofon-navy); color: #fff; padding: 8px 16px;
     border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none;
@@ -255,7 +264,10 @@
       <a href="https://www.kofon-motion.com/Precision_motion_institute/planetary_gearbox/">Institute</a>
       <a href="https://www.kofon-motion.com/service177/faq984/">Service</a>
     </div>
-    <a class="nav-cta" href="https://www.kofon-motion.com/Contact/">Contact sales</a>
+    <div class="nav-right">
+      <a class="lang-switch" href="index.zh.html">ZH</a>
+      <a class="nav-cta" href="https://www.kofon-motion.com/Contact/">Contact sales</a>
+    </div>
   </div>
 </nav>
 
@@ -488,6 +500,7 @@
 <!-- AI Agent widget — drop these lines into any site -->
 <script src="api.js"></script>
 <script src="widget.js"></script>
+<script src="i18n-extra.js"></script>
 <script src="config.kofon.js"></script>
 
 </body>
