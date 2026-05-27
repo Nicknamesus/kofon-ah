@@ -34,7 +34,7 @@ from app.agent.llm import get_chat_llm, system_message
 from app.agent.state import AgentState
 from app.db import SessionLocal
 from app.i18n import t
-from app.models import ProductType, has_active_products
+from app.models import Product, ProductType, has_active_products
 from app.tools import build_custom_config
 
 MIN_FILLED = 2
@@ -246,6 +246,14 @@ async def _build_and_present(
             session, family_code=family.code, modules=merged
         )
 
+        closest_product: Product | None = None
+        if config.closest_stock_sku:
+            closest_product = (
+                await session.execute(
+                    select(Product).where(Product.sku == config.closest_stock_sku)
+                )
+            ).scalar_one_or_none()
+
     closest = (
         t("gc_closest_suffix", lang, sku=config.closest_stock_sku)
         if config.closest_stock_sku
@@ -259,22 +267,41 @@ async def _build_and_present(
         closest=closest,
     )
 
+    cards: list[dict] = [
+        {
+            "kind": "custom_config",
+            "payload": config.model_dump(),
+        },
+    ]
+
+    if closest_product:
+        specs = closest_product.specs or {}
+        cards.append({
+            "kind": "product_results",
+            "payload": {
+                "title": t("gc_closest_match_title", lang),
+                "results": [{
+                    "sku": closest_product.sku,
+                    "name": closest_product.name,
+                    "specs": specs,
+                    "datasheet_url": closest_product.datasheet_url,
+                    "product_page_url": family.product_page_url,
+                }],
+            },
+        })
+
+    cards.append({
+        "kind": "gate",
+        "payload": {
+            "question": t("gc_quote_question", lang),
+            "yes_label": t("gate_yes_request_quote", lang),
+            "no_label": t("gate_no_engineer_first", lang),
+        },
+    })
+
     return {
         "messages": [AIMessage(content=summary)],
-        "cards": [
-            {
-                "kind": "custom_config",
-                "payload": config.model_dump(),
-            },
-            {
-                "kind": "gate",
-                "payload": {
-                    "question": t("gc_quote_question", lang),
-                    "yes_label": t("gate_yes_request_quote", lang),
-                    "no_label": t("gate_no_engineer_first", lang),
-                },
-            },
-        ],
+        "cards": cards,
         "slots": {
             "customize": {
                 **customize,
@@ -292,9 +319,9 @@ async def _build_and_present(
                     "family": family.family,
                     "product_type_code": family.code,
                     "specs": merged,
-                    "datasheet_url": None,
-                    "cad_url": None,
-                    "lead_time_days": None,
+                    "datasheet_url": closest_product.datasheet_url if closest_product else None,
+                    "cad_url": closest_product.cad_url if closest_product else None,
+                    "lead_time_days": closest_product.lead_time_days if closest_product else None,
                     "status": "custom",
                 }
             ],

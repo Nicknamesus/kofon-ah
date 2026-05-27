@@ -49,9 +49,14 @@ async def build_custom_config(
 
     closest = _closest_stock_sku(stock, modules)
 
-    bits = ", ".join(f"{k}={v}" for k, v in sorted(modules.items()) if v is not None)
+    schema = family.spec_schema or {}
+    bits = ", ".join(
+        f"{(schema.get(k) or {}).get('label', k)}: {v}"
+        for k, v in sorted(modules.items())
+        if v is not None
+    )
     rationale = (
-        f"Custom {family.name} build with {bits}."
+        f"Custom {family.name} build — {bits}."
         if bits
         else f"Custom {family.name} build (no constraints yet)."
     )

@@ -85,6 +85,11 @@ class MessageRequest(BaseModel):
         description="Structured spec values from the customisation form widget. "
         "Keyed by spec_schema keys (e.g. frame_size_mm, ratio).",
     )
+    contact_email: str | None = Field(
+        default=None,
+        description="Optional email address captured from the customisation form. "
+        "Stored in slots.contact.email for CRM / email side effects.",
+    )
     force_human: bool = Field(
         default=False,
         description="Fast-lane signal from the 'Talk to a human' utility chip. "
@@ -143,6 +148,10 @@ async def post_message(payload: MessageRequest) -> StreamingResponse:
             slot_input["customize"] = {"active": True}
         if payload.force_human:
             slot_input["force_human"] = True
+        if payload.contact_email:
+            contact = slot_input.get("contact") or {}
+            contact["email"] = payload.contact_email
+            slot_input["contact"] = contact
         if payload.custom_modules:
             slot_input["custom_modules_submitted"] = payload.custom_modules
         if payload.picked_problem_id:
