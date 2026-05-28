@@ -136,6 +136,20 @@ async def run(state: AgentState) -> dict:
             session, filters=merged_filters, limit=3
         )
 
+        # Relax over-constrained searches. The LLM often reads a model code
+        # like "KGR070" as family=kgr_series + frame_size_mm=70, but the
+        # catalog stores frame size inconsistently (some SKUs use the
+        # numeric `frame_size_mm`, others a `frame_size` string like
+        # "KGR070"), so the strict numeric filter can wrongly return zero.
+        # Rather than dead-end, retry on the family alone — a shortlist for
+        # the right family beats "no results" every time.
+        if not results and merged.get("family") and len(merged) > 1:
+            results = await search_products(
+                session,
+                filters=SearchProductsFilters(family=merged["family"]),
+                limit=3,
+            )
+
     if not results:
         msg = t("gf_no_results", lang)
         return {

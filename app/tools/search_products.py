@@ -40,6 +40,7 @@ async def search_products(
         pattern = f"%{query}%"
         stmt = stmt.where(
             or_(
+                Product.sku.ilike(pattern),
                 Product.name.ilike(pattern),
                 ProductType.name.ilike(pattern),
                 ProductType.description.ilike(pattern),
@@ -80,8 +81,12 @@ async def search_products(
             family=pt.family if pt else None,
             product_type_code=pt.code if pt else None,
             specs=p.specs,
-            datasheet_url=p.datasheet_url,
-            cad_url=p.cad_url,
+            # Many SKUs promoted from drafts carry their product-detail link
+            # nested in `specs.datasheet_url` rather than the column; fall
+            # back to it so the widget links to the specific product page
+            # instead of dropping to the product-type's category list.
+            datasheet_url=p.datasheet_url or (p.specs or {}).get("datasheet_url"),
+            cad_url=p.cad_url or (p.specs or {}).get("cad_url"),
             product_page_url=pt.product_page_url if pt else None,
             lead_time_days=p.lead_time_days,
             status=p.status,
