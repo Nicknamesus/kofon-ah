@@ -57,6 +57,19 @@ async def search_products(
         stmt = stmt.where(
             Product.specs["frame_size_mm"].as_integer() == filters.frame_size_mm
         )
+    if filters.ratio is not None:
+        stmt = stmt.where(Product.specs["ratio"].as_integer() == filters.ratio)
+    if filters.stages is not None:
+        # Stage count is stored under inconsistent keys across families
+        # (`stages` / `stage` / `stage_count`); match any of them. A missing
+        # key casts to SQL NULL and simply fails its arm of the OR.
+        stmt = stmt.where(
+            or_(
+                Product.specs["stages"].as_integer() == filters.stages,
+                Product.specs["stage"].as_integer() == filters.stages,
+                Product.specs["stage_count"].as_integer() == filters.stages,
+            )
+        )
     if filters.min_nominal_torque_nm is not None:
         stmt = stmt.where(
             Product.specs["nominal_torque_nm"].as_float()
