@@ -708,8 +708,6 @@ img.aiagent-msg-avatar {
   object-fit: cover;
   flex-shrink: 0;
   margin-top: 2px;
-  padding: 3px;
-  background: #fff;
 }
 
 .aiagent-msg-bubble {
