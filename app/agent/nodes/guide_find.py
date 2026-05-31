@@ -29,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent.llm import get_chat_llm, system_message
 from app.agent.state import AgentState
+from app.content_i18n import tr_family_group
 from app.db import SessionLocal
 from app.i18n import t
 from app.models import ProductType, has_active_products
@@ -229,12 +230,12 @@ def _format_results(results: list[ProductOut], lang: str | None) -> str:
         backlash = r.specs.get("backlash_arcmin")
         bits: list[str] = []
         if ratio is not None:
-            bits.append(f"{ratio}:1 ratio")
+            bits.append(t("gf_detail_ratio", lang, v=ratio))
         if torque is not None:
-            bits.append(f"{torque} Nm nominal")
+            bits.append(t("gf_detail_torque", lang, v=torque))
         if backlash is not None:
-            bits.append(f"{backlash} arcmin backlash")
-        detail = ", ".join(bits) if bits else r.family or ""
+            bits.append(t("gf_detail_backlash", lang, v=backlash))
+        detail = ", ".join(bits) if bits else tr_family_group(r.family, lang) or ""
         link = f"\n    {r.datasheet_url}" if r.datasheet_url else ""
         lines.append(f"  - {r.sku} ({r.name}) — {detail}{link}")
     lines.append("\n" + t("gf_do_any_fit", lang))
