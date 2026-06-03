@@ -78,6 +78,10 @@ td .trunc { display: inline-block; max-width: 320px; overflow: hidden; text-over
 .btn.danger { background: var(--danger); }
 .btn.ok { background: var(--ok); color: #04210f; }
 
+/* row action buttons — keep Edit + Delete from overlapping */
+td .actions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
+td .actions form { margin: 0; display: inline-flex; }
+
 .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; }
 .toolbar .spacer { flex: 1; }
 input[type=text], input[type=password], input[type=number], input[type=email], select, textarea {

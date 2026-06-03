@@ -36,12 +36,14 @@
       {% endfor %}
       <td class="right">
         {% if can_write %}
+        <div class="actions">
           <a class="btn small ghost" href="/admin/content/{{ spec.key }}/edit?{% for c in spec.pk %}{{ c }}={{ row[c] }}{% if not loop.last %}&{% endif %}{% endfor %}">Edit</a>
-          <form method="post" action="/admin/api/content/{{ spec.key }}/delete" class="inline" data-confirm="Delete this {{ spec.singular }}? This cannot be undone.">
+          <form method="post" action="/admin/api/content/{{ spec.key }}/delete" data-confirm="Delete this {{ spec.singular }}? This cannot be undone.">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             {% for c in spec.pk %}<input type="hidden" name="{{ c }}" value="{{ row[c] }}">{% endfor %}
             <button class="btn small danger">Delete</button>
           </form>
+        </div>
         {% else %}<span class="muted">read-only</span>{% endif %}
       </td>
     </tr>
