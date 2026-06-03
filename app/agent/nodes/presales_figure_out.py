@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from app.agent.llm import get_chat_llm, system_message
+from app.agent.sanitize import clean_llm_text
 from app.agent.state import AgentState
 from app.content_i18n import tr_family_group, tr_family_name
 from app.db import SessionLocal
@@ -123,11 +124,11 @@ async def run(state: AgentState) -> dict:
 
     # Persist any literal model code the user mentioned so it survives the
     # clarification loop and the later handoff to guide.find.
-    carried_query = (extraction.query or "").strip() or presales.get("query")
+    carried_query = clean_llm_text(extraction.query) or presales.get("query")
 
     if not extraction.ready:
         question = (
-            extraction.follow_up_question
+            clean_llm_text(extraction.follow_up_question)
             or t("pfo_industry_question", lang)
         )
         return {
@@ -135,8 +136,8 @@ async def run(state: AgentState) -> dict:
             "slots": {
                 "presales": {
                     **presales,
-                    "industry": extraction.industry,
-                    "application": extraction.application,
+                    "industry": clean_llm_text(extraction.industry),
+                    "application": clean_llm_text(extraction.application),
                     "query": carried_query,
                 }
             },

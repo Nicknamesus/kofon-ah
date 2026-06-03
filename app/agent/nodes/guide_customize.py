@@ -31,6 +31,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from app.agent.llm import get_chat_llm, system_message
+from app.agent.sanitize import clean_llm_text
 from app.agent.state import AgentState
 from app.content_i18n import tr_family_group, tr_family_name, tr_label
 from app.db import SessionLocal
@@ -93,17 +94,20 @@ async def run(state: AgentState) -> dict:
                 family = all_families[0]
 
     if family is None:
-        # If we already asked and the user replied, try to resolve from text.
-        if customize.get("phase") == "collecting":
-            family = await _resolve_family_from_conversation(
-                state.get("messages", []), lang
+        # Try to resolve the family straight from what the user already
+        # said — both on first contact ("customise a planetary roller
+        # screw") and after we've explicitly asked. Skipping this on the
+        # first turn forced a needless "which family?" round-trip even when
+        # they named the family in their opening message.
+        family = await _resolve_family_from_conversation(
+            state.get("messages", []), lang
+        )
+        if family is not None:
+            schema = family.spec_schema or {}
+            return _form_card(
+                family, schema, {},
+                {**customize, "family_code": family.code}, lang,
             )
-            if family is not None:
-                schema = family.spec_schema or {}
-                return _form_card(
-                    family, schema, {},
-                    {**customize, "family_code": family.code}, lang,
-                )
 
     if family is None:
         async with SessionLocal() as session:
@@ -175,7 +179,7 @@ async def run(state: AgentState) -> dict:
 
     if not ready:
         question = (
-            extraction.follow_up_question
+            clean_llm_text(extraction.follow_up_question)
             or t("gc_what_target", lang, key=next(iter(schema.keys()), "value"))
         )
         return {

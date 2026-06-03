@@ -11,3 +11,5 @@ venv/
 # Editor
 .vscode/
 .idea/
+
+TEST_RUN.md

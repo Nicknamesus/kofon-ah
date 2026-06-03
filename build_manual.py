@@ -12,6 +12,8 @@ from docx.oxml import OxmlElement, parse_xml
 from docx.oxml.ns import nsdecls, qn
 from docx.shared import Pt, RGBColor, Inches
 
+from toc_util import add_toc_before_first_heading
+
 NAVY = RGBColor(0x13, 0x21, 0x78)
 GREY = RGBColor(0x5A, 0x64, 0x73)
 CODE_BG = "F2F3F7"
@@ -193,7 +195,7 @@ r.font.color.rgb = GREY
 sub = doc.add_paragraph()
 sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
 sub.add_run().add_break()
-r = sub.add_run("The hardcoded single-process build (widget + FastAPI + LangGraph + DeepSeek)")
+r = sub.add_run("The self-contained single-service build (widget + FastAPI + LangGraph + DeepSeek)")
 r.italic = True
 r.font.color.rgb = GREY
 meta = doc.add_paragraph()
@@ -221,7 +223,7 @@ P(
 P(
     "If you are new to the project, read Chapter 1 (Architecture) first; it is the map that "
     "makes every later chapter make sense. If you are here to perform a specific task — add a "
-    "product, add a language, swap the CRM — jump to Chapter 18 (Maintenance Cookbook), which "
+    "product, add a language, swap the CRM — jump to Chapter 20 (Maintenance Cookbook), which "
     "cross-references the detailed chapters."
 )
 P("Conventions used throughout:")
@@ -240,9 +242,10 @@ BULLET([
 H1("1. Architecture overview")
 P(
     "The Kofon chatbot is a B2B pre-sales / guide / post-sales assistant for a motion-components "
-    "manufacturer. This repository is the **hardcoded single-process build**: one FastAPI "
+    "manufacturer. This repository is the **self-contained single-service build**: one FastAPI "
     "process serves both the browser widget (static files) and the JSON/SSE API from the same "
-    "origin. There is no separate front-end server, no CORS dance, and no second port. A "
+    "origin. There is no separate front-end server, no cross-origin configuration to manage, and "
+    "no second port. A "
     "decoupled, reusable build of the same system lives in sibling repositories "
     "(`../ai-agent-backend` + `../ai-agent-addon`); this one trades that modularity for the "
     "simplest possible deployment."
@@ -262,8 +265,9 @@ KV([
 
 H2("Why DeepSeek and Chinese-native services")
 P(
-    "Kofon operates from inside China, so the usual Western SaaS defaults (OpenAI, Anthropic, "
-    "SendGrid, Salesforce) are either blocked or high-latency behind the GFW. Every external "
+    "Kofon operates from inside mainland China, so the usual Western SaaS defaults (OpenAI, "
+    "Anthropic, SendGrid, Salesforce) are either unavailable or high-latency in that network "
+    "environment. Every external "
     "dependency therefore has a China-friendly option: DeepSeek for the LLM, DashScope "
     "(Alibaba Qwen) for embeddings, Zoho's `.com.cn` region for CRM, and Aliyun DirectMail for "
     "email. This single constraint explains many design choices you will meet later; keep it "
@@ -1344,6 +1348,8 @@ P(
 )
 
 # ---------------- save ----------------
+# Drop a live Table of Contents on its own page between the cover and Ch.0.
+add_toc_before_first_heading(doc, title="Contents")
 add_page_numbers(doc)
 out = "Kofon_Chatbot_Engineering_Manual.docx"
 doc.save(out)

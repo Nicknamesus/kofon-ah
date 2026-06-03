@@ -375,20 +375,29 @@ _T: dict[str, dict[str, str]] = {
     # ----- postsales.identify -----
     "pi_sorry_what_doing": {
         "EN": "I'm sorry to hear that — could you tell me what the unit "
-              "is doing, or what isn't working as expected?",
+              "is doing, or what isn't working as expected? And if you "
+              "have it handy, the product model (the number on the label) "
+              "helps too.",
         "DE": "Das tut mir leid — könnten Sie beschreiben, was das Gerät "
-              "tut bzw. was nicht wie erwartet funktioniert?",
+              "tut bzw. was nicht wie erwartet funktioniert? Und falls zur "
+              "Hand, hilft auch das Produktmodell (die Nummer auf dem "
+              "Typenschild).",
         "FR": "Désolé d'entendre cela — pourriez-vous me décrire le "
               "comportement de l'appareil, ou ce qui ne fonctionne pas "
-              "comme prévu ?",
+              "comme prévu ? Et si vous l'avez sous la main, le modèle du "
+              "produit (le numéro sur l'étiquette) m'aiderait aussi.",
         "RU": "Сожалею — не могли бы вы описать, что происходит с "
-              "устройством или что именно работает не так?",
+              "устройством или что именно работает не так? И если под "
+              "рукой, укажите модель изделия (номер на шильдике).",
         "JA": "ご不便をおかけして申し訳ございません。装置の動作や"
-              "期待通りに動いていない点を教えていただけますか？",
+              "期待通りに動いていない点を教えていただけますか？ また、"
+              "おわかりであれば製品の型番（ラベルに記載の番号）も"
+              "教えていただけると助かります。",
         "KO": "그런 일이 있으셨군요. 제품이 어떤 동작을 하는지, 또는 "
-              "어떤 점이 예상과 다른지 알려주시겠어요?",
+              "어떤 점이 예상과 다른지 알려주시겠어요? 그리고 가능하시면 "
+              "제품 모델명(라벨에 적힌 번호)도 함께 알려주시면 도움이 됩니다.",
         "ZH": "很抱歉听到这个 — 能告诉我这台设备现在的表现,或者哪里没有"
-              "按预期工作吗?",
+              "按预期工作吗?如果方便,也请告诉我产品型号(铭牌上的编号)。",
     },
     "pi_what_symptom": {
         "EN": "What's the symptom you're seeing?",
@@ -864,6 +873,20 @@ _T: dict[str, dict[str, str]] = {
               "추가로 전하고 싶은 내용이 있나요?",
         "ZH": "好的 — 我已转达。还有想让接下来联系您的工程师知道的"
               "其他事项吗?",
+    },
+
+    # ----- transient-error fallback (graph raised mid-turn) -----
+    "err_transient": {
+        "EN": "Sorry — something hiccupped on my end. Could you send "
+              "that again?",
+        "DE": "Entschuldigung — auf meiner Seite ist etwas schiefgelaufen. "
+              "Könnten Sie das noch einmal senden?",
+        "FR": "Désolé — un incident est survenu de mon côté. Pourriez-vous renvoyer votre message ?",
+        "RU": "Извините — у меня произошёл сбой. Не могли бы вы отправить сообщение ещё раз?",
+        "JA": "申し訳ありません — こちらで問題が発生しました。もう一度送信していただけますか？",
+        "KO": "죄송합니다 — 제 쪽에서 문제가 발생했어요. 다시 한 번 "
+              "보내주시겠어요?",
+        "ZH": "抱歉 — 我这边出了点问题。能麻烦您再发送一次吗?",
     },
 
     # ----- card / outcome titles & badges (used by widget through SSE) -----

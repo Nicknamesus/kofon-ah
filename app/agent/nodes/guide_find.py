@@ -28,6 +28,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent.llm import get_chat_llm, system_message
+from app.agent.sanitize import clean_llm_text
 from app.agent.state import AgentState
 from app.content_i18n import tr_family_group
 from app.db import SessionLocal
@@ -117,7 +118,10 @@ async def run(state: AgentState) -> dict:
         prompt_content = await _build_system_prompt(session)
 
     # Extract filters from the full conversation so the LLM sees prior turns.
-    llm = get_chat_llm().with_structured_output(_Extraction)
+    # temperature=0: this is slot extraction, not prose. The default 0.2
+    # made the same query extract different filters across turns — a source
+    # of "works sometimes" flakiness. Match every other extractor node.
+    llm = get_chat_llm(temperature=0).with_structured_output(_Extraction)
     extraction: _Extraction = await llm.ainvoke(
         [system_message(prompt_content, lang), *messages]
     )
@@ -132,7 +136,7 @@ async def run(state: AgentState) -> dict:
     # The literal model code/SKU persists across turns just like filters:
     # the user may type "RF080" then "2 stage 20:1" in separate messages.
     # Latest non-empty extraction wins.
-    query = (extraction.query or "").strip() or existing_query
+    query = clean_llm_text(extraction.query) or existing_query
 
     # Re-evaluate readiness with merged context — if presales seeded a family,
     # we may already have enough to search even if this turn's extraction
@@ -141,7 +145,7 @@ async def run(state: AgentState) -> dict:
 
     if not ready:
         question = (
-            extraction.follow_up_question
+            clean_llm_text(extraction.follow_up_question)
             or t("gf_clarify", lang)
         )
         return {
