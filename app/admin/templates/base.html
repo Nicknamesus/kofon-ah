@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Kofon Admin{% endblock %}</title>
+  <link rel="stylesheet" href="/admin/static/admin.css">
+</head>
+<body data-csrf="{{ csrf_token }}">
+  <header class="topbar">
+    <div class="brand">Kofon&nbsp;Admin</div>
+    <div class="spacer"></div>
+    {% if can('notifications.read') %}
+    <div class="bell" id="bell" title="Notifications">
+      <a href="/admin/notifications">🔔<span class="badge" id="notif-badge" hidden>0</span></a>
+    </div>
+    {% endif %}
+    <div class="user">{{ user.email }} · <span class="muted">{{ user.role }}</span></div>
+    <form method="post" action="/admin/api/logout" class="inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="btn small ghost">Log out</button>
+    </form>
+  </header>
+  <div class="layout">
+    <nav class="sidebar">
+      {% for label, url, perm in nav %}
+        <a href="{{ url }}" class="{{ 'active' if request.url.path == url else '' }}">{{ label }}</a>
+      {% endfor %}
+    </nav>
+    <main class="content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  <div id="toast-area"></div>
+  <script src="/admin/static/admin.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Kofon Admin{% endblock %}
+{% block content %}
+<h1>Dashboard</h1>
+
+{% if embedding_provider == 'hash' %}
+<div class="banner warn">
+  Embeddings provider is <b>hash</b> (non-semantic). Set <code>EMBEDDING_PROVIDER</code>
+  to <code>bge-m3</code> or <code>dashscope</code> before production — search quality
+  depends on it.
+</div>
+{% endif %}
+
+<div class="cards">
+  <div class="card"><div class="num">{{ stats.products }}</div><div class="lbl">Products</div></div>
+  <div class="card"><div class="num">{{ stats.problems }}</div><div class="lbl">Problem types</div></div>
+  <div class="card"><div class="num">{{ stats.conversations }}</div><div class="lbl">Conversations</div></div>
+  <div class="card"><div class="num">{{ stats.unread }}</div><div class="lbl">Unread alerts</div></div>
+</div>
+
+<h2>Recent sales / handoff alerts</h2>
+{% if recent %}
+<table>
+  <thead><tr><th>When</th><th>Kind</th><th>Summary</th><th>Division</th><th></th></tr></thead>
+  <tbody>
+    {% for n in recent %}
+    <tr>
+      <td class="mono">{{ n.created_at.strftime('%Y-%m-%d %H:%M') if n.created_at else '' }}</td>
+      <td><span class="pill {{ n.kind }}">{{ n.kind.replace('_',' ') }}</span></td>
+      <td>{{ n.summary }}{% if not n.read_at %} <span class="pill">unread</span>{% endif %}</td>
+      <td class="mono">{{ n.division_code or '—' }}</td>
+      <td class="right"><a href="/admin/notifications">View</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">No alerts yet. They appear here the moment the bot connects a visitor to sales or a human.</p>
+{% endif %}
+{% endblock %}

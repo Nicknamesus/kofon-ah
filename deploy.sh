@@ -107,8 +107,12 @@ alembic upgrade head
 log "Setting up LangGraph checkpointer (idempotent)..."
 python -m app.agent.setup_checkpointer
 
-log "Loading seed content (idempotent)..."
+log "Loading seed content (idempotent; skips if DB already populated)..."
 python -m app.seed.load
+
+log "Ensuring an admin account exists (idempotent)..."
+log "  (set ADMIN_BOOTSTRAP_EMAIL + ADMIN_BOOTSTRAP_PASSWORD in .env for the first superadmin)"
+python -m app.admin.bootstrap || log "WARNING: no admin created — set ADMIN_BOOTSTRAP_* in .env, then re-run 'python -m app.admin.bootstrap'."
 
 # ---- run ----
 if $RUN_SERVER; then

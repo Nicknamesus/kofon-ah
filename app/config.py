@@ -77,6 +77,21 @@ class Settings(BaseSettings):
     aliyun_dm_account_name: str = ""
     aliyun_dm_from_alias: str = ""
 
+    # ---- Admin interface ----
+    # Cookie + session knobs for the `/admin` web app. `admin_cookie_secure`
+    # must be True in production (HTTPS / cloudflared); leave False for local
+    # http://localhost testing or the login cookie won't be sent back.
+    admin_cookie_name: str = "kofon_admin_session"
+    admin_cookie_secure: bool = False
+    admin_session_ttl_hours: int = 12
+    # Used by `python -m app.admin.bootstrap` to create the first superadmin
+    # if none exists. Safe to leave unset and pass on the CLI instead.
+    admin_bootstrap_email: str = ""
+    admin_bootstrap_password: str = ""
+    # Where `POST /admin/api/backup` writes archives (relative to the backend
+    # working dir if not absolute).
+    admin_backup_dir: str = "backups"
+
     # Side-effect orchestration knobs.
     # When True (default), CRM / email failures are swallowed and logged
     # — the user still sees the terminal card. Flip to False in

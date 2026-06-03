@@ -22,6 +22,12 @@ from app.models.content import (
     UseCaseProductType,
     has_active_products,
 )
+from app.models.admin import (
+    AdminAuditLog,
+    AdminSession,
+    AdminUser,
+    Notification,
+)
 from app.models.runtime import Conversation, Message
 from app.models.sideeffects import CrmCall, EmailCall, Rfq, Ticket
 
@@ -41,4 +47,8 @@ __all__ = [
     "Ticket",
     "CrmCall",
     "EmailCall",
+    "AdminUser",
+    "AdminSession",
+    "AdminAuditLog",
+    "Notification",
 ]

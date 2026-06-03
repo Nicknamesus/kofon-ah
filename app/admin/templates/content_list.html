@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}{{ spec.label }} — Kofon Admin{% endblock %}
+{% block content %}
+<h1>{{ spec.label }} <span class="muted" style="font-size:14px">({{ total }})</span></h1>
+
+<div class="toolbar">
+  {% if spec.search_columns %}
+  <form method="get" action="/admin/content/{{ spec.key }}" class="inline">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search…" style="width:240px">
+  </form>
+  {% endif %}
+  <div class="spacer"></div>
+  {% if can_write %}
+  <a class="btn small" href="/admin/content/{{ spec.key }}/new">+ New {{ spec.singular }}</a>
+  {% endif %}
+</div>
+
+<table>
+  <thead>
+    <tr>
+      {% for attr, header in spec.list_columns %}<th>{{ header }}</th>{% endfor %}
+      <th class="right">Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+    <tr>
+      {% for attr, header in spec.list_columns %}
+        {% set val = row[attr] %}
+        <td class="{{ 'mono' if attr.endswith('_id') or attr in ('code','sku') else '' }}">
+          {%- if attr in fk_labels and val is not none -%}
+            <span class="trunc">{{ fk_labels[attr].get(val, val) }}</span>
+          {%- elif val is none -%}<span class="muted">—</span>
+          {%- else -%}<span class="trunc">{{ val }}</span>{%- endif -%}
+        </td>
+      {% endfor %}
+      <td class="right">
+        {% if can_write %}
+          <a class="btn small ghost" href="/admin/content/{{ spec.key }}/edit?{% for c in spec.pk %}{{ c }}={{ row[c] }}{% if not loop.last %}&{% endif %}{% endfor %}">Edit</a>
+          <form method="post" action="/admin/api/content/{{ spec.key }}/delete" class="inline" data-confirm="Delete this {{ spec.singular }}? This cannot be undone.">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            {% for c in spec.pk %}<input type="hidden" name="{{ c }}" value="{{ row[c] }}">{% endfor %}
+            <button class="btn small danger">Delete</button>
+          </form>
+        {% else %}<span class="muted">read-only</span>{% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="{{ spec.list_columns|length + 1 }}" class="muted">No rows.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

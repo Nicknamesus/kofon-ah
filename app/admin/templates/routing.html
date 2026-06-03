@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Routing & divisions — Kofon Admin{% endblock %}
+{% block content %}
+<h1>Routing &amp; divisions</h1>
+<p class="muted">
+  This is <code>routing.yaml</code>: divisions (with notification inbox emails) and the
+  (main_type, family) → division matrix. Replace the placeholder
+  <code>*.example</code> inboxes with real distribution lists before go-live.
+</p>
+
+{% if saved %}<div class="banner ok">Saved. The next side-effect will use the updated routing.</div>{% endif %}
+{% if error %}<div class="banner err">{{ error }}</div>{% endif %}
+
+<form method="post" action="/admin/api/routing/save">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <div class="field">
+    <textarea class="tall" name="content" spellcheck="false">{{ content }}</textarea>
+    <div class="help">Validated as YAML on save; must define at least <code>divisions</code> and <code>routes</code>.</div>
+  </div>
+  <button class="btn" type="submit">Save routing</button>
+</form>
+{% endblock %}

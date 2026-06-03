@@ -8,30 +8,30 @@
 
   /* ---------- Inline SVG icons ---------- */
   const ICON = {
-    chat:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-13.5 7.8L3 21l1.3-4.5A9 9 0 1 1 21 12z"/></svg>',
-    close:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
-    minus:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="12" x2="18" y2="12"/></svg>',
-    globe:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="3" y1="12" x2="21" y2="12"/><path d="M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
+    chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-13.5 7.8L3 21l1.3-4.5A9 9 0 1 1 21 12z"/></svg>',
+    close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+    minus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="12" x2="18" y2="12"/></svg>',
+    globe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="3" y1="12" x2="21" y2="12"/><path d="M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
     chevron: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>',
-    arrow:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>',
-    back:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>',
-    send:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
-    clip:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.4 11l-9.6 9.6a5.6 5.6 0 0 1-7.9-7.9l9.6-9.6a3.7 3.7 0 1 1 5.2 5.2l-9.6 9.6a1.9 1.9 0 1 1-2.6-2.6l8.9-8.9"/></svg>',
-    mic:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
-    cog:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
-    gear:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9"/><line x1="12" y1="3" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="21"/><line x1="3" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="21" y2="12"/></svg>',
-    file:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>',
-    quote:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="7" y1="14" x2="11" y2="14"/><line x1="7" y1="17" x2="14" y2="17"/></svg>',
-    clock:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>',
-    user:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
-    expo:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 8 22 9 17 14 18 21 12 18 6 21 7 14 2 9 9 8 12 2"/></svg>',
+    arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>',
+    back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>',
+    send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
+    clip: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.4 11l-9.6 9.6a5.6 5.6 0 0 1-7.9-7.9l9.6-9.6a3.7 3.7 0 1 1 5.2 5.2l-9.6 9.6a1.9 1.9 0 1 1-2.6-2.6l8.9-8.9"/></svg>',
+    mic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
+    cog: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+    gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9"/><line x1="12" y1="3" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="21"/><line x1="3" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="21" y2="12"/></svg>',
+    file: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>',
+    quote: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="7" y1="14" x2="11" y2="14"/><line x1="7" y1="17" x2="14" y2="17"/></svg>',
+    clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>',
+    user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+    expo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 8 22 9 17 14 18 21 12 18 6 21 7 14 2 9 9 8 12 2"/></svg>',
     explore: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="16.2 7.8 13.4 13.4 7.8 16.2 10.6 10.6"/></svg>',
-    wrench:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a5 5 0 0 0 6.6 6.6L14 20.2a3 3 0 1 1-4.2-4.2l7.3-7.3a5 5 0 0 0-2.4-2.4z"/></svg>',
-    more:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>',
-    check:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+    wrench: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a5 5 0 0 0 6.6 6.6L14 20.2a3 3 0 1 1-4.2-4.2l7.3-7.3a5 5 0 0 0-2.4-2.4z"/></svg>',
+    more: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
     handoff: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 11a4 4 0 1 0-8 0"/><path d="M2 21a10 10 0 0 1 20 0"/><circle cx="12" cy="7" r="4"/></svg>',
     sparkle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.5 5.5l2.8 2.8M15.7 15.7l2.8 2.8M5.5 18.5l2.8-2.8M15.7 8.3l2.8-2.8"/></svg>',
-    star:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+    star: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
   };
 
   /* ---------- Tiny DOM helpers ---------- */
@@ -50,83 +50,83 @@
   /* Translation table — EN fallback only. All other languages are
      loaded from i18n-extra.js via AIAgent.I18N before mount(). */
   const I18N = {
-    matching_products:       { EN: "Matching products" },
-    no_matches_yet:          { EN: "No matches yet." },
-    recommended_families:    { EN: "Recommended families" },
-    fit_label:               { EN: "fit {n}/5" },
-    no_curated_match:        { EN: "No curated match for that combination yet." },
-    closest_matches:         { EN: "Closest matches" },
-    none_of_these:           { EN: "None of these — let me describe more" },
-    candidates_more_info:    { EN: "Could you tell me a bit more about what's happening? Any noise, error code, or what changed recently helps me narrow it down." },
-    candidates_describe_more:{ EN: "Got it — could you describe what the unit is doing in a bit more detail? E.g. any noise, leak, error code, or what changed recently." },
-    likely_issue:            { EN: "Likely issue" },
-    badge_sales:             { EN: "Sales handoff" },
-    badge_engineer:          { EN: "Engineer" },
-    badge_resolved:          { EN: "Resolved" },
-    title_sales:             { EN: "Connecting you with sales" },
-    title_engineer:          { EN: "Connecting you with an engineer" },
-    title_all_set:           { EN: "All set" },
-    title_done:              { EN: "Done" },
-    next_prefix:             { EN: "Next: " },
-    gate_yes:                { EN: "Yes" },
-    gate_no:                 { EN: "No" },
-    are_these_helpful:       { EN: "Are these results helpful?" },
-    datasheet_label:         { EN: "Datasheet" },
-    view_product:            { EN: "View product" },
-    back_to_menu:            { EN: "Back to menu" },
-    type_placeholder:        { EN: "Type your question…" },
-    config_form_title:       { EN: "Configure {family}" },
-    config_submit:           { EN: "Find closest match" },
-    config_request_custom:   { EN: "Request a custom part" },
-    config_optional:         { EN: "All fields optional — fill in what you know." },
-    feature_in_dev:          { EN: "This feature is currently in development. In the meantime, feel free to ask me anything else or <strong>talk to one of our engineers</strong> directly." },
-    expo_followup:           { EN: "Thanks for visiting us! This feature is still being built — for now, please tell me what you're looking for and I'll help from here, or I can <strong>connect you with the engineer you spoke to</strong>." },
-    datasheet_answer:        { EN: "I can help you find a datasheet. Tell me which product family or SKU you're interested in and I'll point you to the right page." },
-    seed_presales:           { EN: "I want to explore what would fit my application." },
-    seed_guide:              { EN: "I know roughly what I need — help me find products." },
-    seed_postsales:          { EN: "I have a problem with a product I own." },
-    seed_other:              { EN: "I have a question." },
-    seed_human:              { EN: "Connect me with a human engineer." },
-    switched_lang:           { EN: "Switched to {lang}. How can I help?" },
-    greeting:                { EN: "Hi, I'm Kofon AI" },
-    subtitle:                { EN: "I help you find the right motion component, customize one, or fix an issue with an existing product." },
-    status_label:            { EN: "Online · usually replies in ~30s" },
-    teaser_text:             { EN: "Need help picking a gearbox? Ask me." },
-    actions_title:           { EN: "What brings you here today?" },
-    action_presales:         { EN: "I'm exploring" },
-    action_presales_sub:     { EN: "Not sure what I need yet — help me figure it out" },
-    action_guide:            { EN: "I know what I need" },
-    action_guide_sub:        { EN: "Find or customize a specific product" },
-    action_postsales:        { EN: "I have a product issue" },
-    action_postsales_sub:    { EN: "Post-sales support for a product I own" },
-    action_other:            { EN: "Something else" },
-    action_other_sub:        { EN: "Question doesn't fit the above" },
-    utilities_title:         { EN: "Quick tools" },
-    util_custom_build:       { EN: "Custom build" },
-    util_lead_times:         { EN: "Lead times" },
-    util_datasheet:          { EN: "Get a datasheet" },
-    util_expo:               { EN: "We met at an expo" },
-    util_human:              { EN: "Talk to a human" },
-    resources_title:         { EN: "Helpful resources" },
-    link_faq:                { EN: "FAQ — lead times, certifications, customization" },
-    link_downloads:          { EN: "Browse all data downloads" },
-    link_kdp:                { EN: "Open the KDP design selection tool" },
-    expo_title:              { EN: "We're at AUTOMATE 2026 — Booth 3245" },
-    expo_meta:               { EN: "Detroit · May 14–17" },
-    expo_cta:                { EN: "Were you there? Continue here" },
-    seed_customize:          { EN: "I'd like to configure a custom gearbox build." },
-    seed_leadtime:           { EN: "What are your current lead times?" },
-    seed_datasheet:          { EN: "I need a product datasheet." },
-    seed_expo:               { EN: "We met at a trade show — picking up where we left off." },
-    footer_note:             { EN: 'ISO 9001:2015 · EN / DE / FR / RU / JA / KO / ZH · <a href="#">Privacy</a>' },
-    config_email_label:      { EN: "Your email (for quote follow-up)" },
-    config_email_placeholder:{ EN: "you@company.com" },
-    rating_title:            { EN: "How was this conversation?" },
+    matching_products: { EN: "Matching products" },
+    no_matches_yet: { EN: "No matches yet." },
+    recommended_families: { EN: "Recommended families" },
+    fit_label: { EN: "fit {n}/5" },
+    no_curated_match: { EN: "No curated match for that combination yet." },
+    closest_matches: { EN: "Closest matches" },
+    none_of_these: { EN: "None of these — let me describe more" },
+    candidates_more_info: { EN: "Could you tell me a bit more about what's happening? Any noise, error code, or what changed recently helps me narrow it down." },
+    candidates_describe_more: { EN: "Got it — could you describe what the unit is doing in a bit more detail? E.g. any noise, leak, error code, or what changed recently." },
+    likely_issue: { EN: "Likely issue" },
+    badge_sales: { EN: "Sales handoff" },
+    badge_engineer: { EN: "Engineer" },
+    badge_resolved: { EN: "Resolved" },
+    title_sales: { EN: "Connecting you with sales" },
+    title_engineer: { EN: "Connecting you with an engineer" },
+    title_all_set: { EN: "All set" },
+    title_done: { EN: "Done" },
+    next_prefix: { EN: "Next: " },
+    gate_yes: { EN: "Yes" },
+    gate_no: { EN: "No" },
+    are_these_helpful: { EN: "Are these results helpful?" },
+    datasheet_label: { EN: "Datasheet" },
+    view_product: { EN: "View product" },
+    back_to_menu: { EN: "Back to menu" },
+    type_placeholder: { EN: "Type your question…" },
+    config_form_title: { EN: "Configure {family}" },
+    config_submit: { EN: "Find closest match" },
+    config_request_custom: { EN: "Request a custom part" },
+    config_optional: { EN: "All fields optional — fill in what you know." },
+    feature_in_dev: { EN: "This feature is currently in development. In the meantime, feel free to ask me anything else or <strong>talk to one of our engineers</strong> directly." },
+    expo_followup: { EN: "Thanks for visiting us! This feature is still being built — for now, please tell me what you're looking for and I'll help from here, or I can <strong>connect you with the engineer you spoke to</strong>." },
+    datasheet_answer: { EN: "I can help you find a datasheet. Tell me which product family or SKU you're interested in and I'll point you to the right page." },
+    seed_presales: { EN: "I want to explore what would fit my application." },
+    seed_guide: { EN: "I know roughly what I need — help me find products." },
+    seed_postsales: { EN: "I have a problem with a product I own." },
+    seed_other: { EN: "I have a question." },
+    seed_human: { EN: "Connect me with a human engineer." },
+    switched_lang: { EN: "Switched to {lang}. How can I help?" },
+    greeting: { EN: "Hi, I'm Kofon AI" },
+    subtitle: { EN: "I help you find the right motion component, customize one, or fix an issue with an existing product." },
+    status_label: { EN: "Online · usually replies in ~30s" },
+    teaser_text: { EN: "Need help picking a gearbox? Ask me." },
+    actions_title: { EN: "What brings you here today?" },
+    action_presales: { EN: "I'm exploring" },
+    action_presales_sub: { EN: "Not sure what I need yet — help me figure it out" },
+    action_guide: { EN: "I know what I need" },
+    action_guide_sub: { EN: "Find or customize a specific product" },
+    action_postsales: { EN: "I have a product issue" },
+    action_postsales_sub: { EN: "Post-sales support for a product I own" },
+    action_other: { EN: "Something else" },
+    action_other_sub: { EN: "Question doesn't fit the above" },
+    utilities_title: { EN: "Quick tools" },
+    util_custom_build: { EN: "Custom build" },
+    util_lead_times: { EN: "Lead times" },
+    util_datasheet: { EN: "Get a datasheet" },
+    util_expo: { EN: "We met at an expo" },
+    util_human: { EN: "Talk to a human" },
+    resources_title: { EN: "Helpful resources" },
+    link_faq: { EN: "FAQ — lead times, certifications, customization" },
+    link_downloads: { EN: "Browse all data downloads" },
+    link_kdp: { EN: "Open the KDP design selection tool" },
+    expo_title: { EN: "We're at AUTOMATE 2026 — Booth 3245" },
+    expo_meta: { EN: "Detroit · May 14–17" },
+    expo_cta: { EN: "Were you there? Continue here" },
+    seed_customize: { EN: "I'd like to configure a custom gearbox build." },
+    seed_leadtime: { EN: "What are your current lead times?" },
+    seed_datasheet: { EN: "I need a product datasheet." },
+    seed_expo: { EN: "We met at a trade show — picking up where we left off." },
+    footer_note: { EN: 'ISO 9001:2015 · EN / DE / FR / RU / JA / KO / ZH · <a href="#">Privacy</a>' },
+    config_email_label: { EN: "Your email (for quote follow-up)" },
+    config_email_placeholder: { EN: "you@company.com" },
+    rating_title: { EN: "How was this conversation?" },
     rating_feedback_placeholder: { EN: "Anything we could do better? (optional)" },
-    rating_submit:           { EN: "Send feedback" },
-    rating_dismiss:          { EN: "Maybe later" },
-    rating_thanks:           { EN: "Thanks for your feedback!" },
-    rating_star_label:       { EN: "Rate {n} of 5" },
+    rating_submit: { EN: "Send feedback" },
+    rating_dismiss: { EN: "Maybe later" },
+    rating_thanks: { EN: "Thanks for your feedback!" },
+    rating_star_label: { EN: "Rate {n} of 5" },
   };
   function _t(widget, key) {
     const lang = (widget && widget.state && widget.state.language) || "EN";
@@ -630,11 +630,11 @@
       // localized so a Chinese user's first visible bubble reads in
       // Chinese, not English.
       const seedByFlow = {
-        presales:  _t(this, "seed_presales"),
-        guide:     _t(this, "seed_guide"),
+        presales: _t(this, "seed_presales"),
+        guide: _t(this, "seed_guide"),
         postsales: _t(this, "seed_postsales"),
-        other:     _t(this, "seed_other"),
-        human:     _t(this, "seed_human"),
+        other: _t(this, "seed_other"),
+        human: _t(this, "seed_human"),
       };
       const subflow = opts && opts.subflow ? opts.subflow : undefined;
       const subflowSeed = subflow ? _t(this, "seed_" + subflow) : null;
@@ -700,13 +700,13 @@
       if (name === "card") {
         const kind = data.kind || "";
         const payload = data.payload || {};
-        if (kind === "product_results")     return this._renderProductResultsCard(payload);
-        if (kind === "recommendations")     return this._renderRecommendationsCard(payload);
-        if (kind === "gate")                return this._renderGateCard(payload);
-        if (kind === "outcome")             return this._renderOutcomeCard(payload);
-        if (kind === "problem_candidates")  return this._renderProblemCandidatesCard(payload);
-        if (kind === "problem_match")       return this._renderProblemMatchCard(payload);
-        if (kind === "custom_config_form")  return this._renderCustomConfigFormCard(payload);
+        if (kind === "product_results") return this._renderProductResultsCard(payload);
+        if (kind === "recommendations") return this._renderRecommendationsCard(payload);
+        if (kind === "gate") return this._renderGateCard(payload);
+        if (kind === "outcome") return this._renderOutcomeCard(payload);
+        if (kind === "problem_candidates") return this._renderProblemCandidatesCard(payload);
+        if (kind === "problem_match") return this._renderProblemMatchCard(payload);
+        if (kind === "custom_config_form") return this._renderCustomConfigFormCard(payload);
         console.warn("AIAgent: unknown card kind", kind, payload);
         return;
       }
@@ -737,8 +737,8 @@
         const link = r.datasheet_url
           ? `<a class="aiagent-card-cta" href="${r.datasheet_url}" target="_blank" rel="noopener">${_t(this, "datasheet_label")} ${ICON.arrow}</a>`
           : r.product_page_url
-          ? `<a class="aiagent-card-cta" href="${r.product_page_url}" target="_blank" rel="noopener">${_t(this, "view_product")} ${ICON.arrow}</a>`
-          : "";
+            ? `<a class="aiagent-card-cta" href="${r.product_page_url}" target="_blank" rel="noopener">${_t(this, "view_product")} ${ICON.arrow}</a>`
+            : "";
         return `
           <div class="aiagent-product-row">
             <div class="aiagent-product-row-main">
@@ -785,7 +785,7 @@
       this._addGate({
         title: payload.question || _t(this, "are_these_helpful"),
         yesLabel: payload.yes_label || _t(this, "gate_yes"),
-        noLabel:  payload.no_label  || _t(this, "gate_no"),
+        noLabel: payload.no_label || _t(this, "gate_no"),
         dismissLabel: payload.dismiss_label || null,
         onYes: () => {
           this.addUserMessage(payload.yes_label || _t(this, "gate_yes"));
@@ -998,9 +998,9 @@
 
     _renderOutcomeCard(payload) {
       const map = {
-        sell:           { type: "sell",     badge: _t(this, "badge_sales"),    title: payload.title || _t(this, "title_sales") },
-        human_handoff:  { type: "human",    badge: _t(this, "badge_engineer"), title: payload.title || _t(this, "title_engineer") },
-        resolved:       { type: "resolved", badge: _t(this, "badge_resolved"), title: payload.title || _t(this, "title_all_set") },
+        sell: { type: "sell", badge: _t(this, "badge_sales"), title: payload.title || _t(this, "title_sales") },
+        human_handoff: { type: "human", badge: _t(this, "badge_engineer"), title: payload.title || _t(this, "title_engineer") },
+        resolved: { type: "resolved", badge: _t(this, "badge_resolved"), title: payload.title || _t(this, "title_all_set") },
       };
       const opt = map[payload.outcome] || { type: "info", badge: "", title: payload.title || _t(this, "title_done") };
       this._addOutcome({
@@ -1090,20 +1090,20 @@
           ${opts.subtitle ? `<p class="aiagent-gate-subtitle">${opts.subtitle}</p>` : ""}
           <div class="aiagent-gate-buttons">
             <button class="aiagent-gate-btn aiagent-gate-btn-yes" type="button">${opts.yesLabel || "Yes"}</button>
-            <button class="aiagent-gate-btn aiagent-gate-btn-no"  type="button">${opts.noLabel  || "No"}</button>
+            <button class="aiagent-gate-btn aiagent-gate-btn-no"  type="button">${opts.noLabel || "No"}</button>
           </div>
           ${dismissHtml}
         </div>
       `);
       const yes = card.querySelector(".aiagent-gate-btn-yes");
-      const no  = card.querySelector(".aiagent-gate-btn-no");
+      const no = card.querySelector(".aiagent-gate-btn-no");
       const dismiss = card.querySelector(".aiagent-gate-dismiss");
       const lock = () => {
         yes.disabled = true; no.disabled = true;
         if (dismiss) dismiss.disabled = true;
       };
       yes.addEventListener("click", () => { lock(); opts.onYes && opts.onYes(); });
-      no .addEventListener("click", () => { lock(); opts.onNo  && opts.onNo();  });
+      no.addEventListener("click", () => { lock(); opts.onNo && opts.onNo(); });
       if (dismiss && opts.onDismiss) {
         dismiss.addEventListener("click", () => { lock(); opts.onDismiss(); });
       }
@@ -1114,9 +1114,9 @@
     _addOutcome(opts) {
       const type = opts.type || "info";
       const iconKey = type === "sell" ? "quote"
-                    : type === "human" ? "handoff"
-                    : type === "resolved" ? "check"
-                    : "sparkle";
+        : type === "human" ? "handoff"
+          : type === "resolved" ? "check"
+            : "sparkle";
       return this.addCard(`
         <div class="aiagent-outcome aiagent-outcome-${type}">
           <div class="aiagent-outcome-badge">${ICON[iconKey]}<span>${opts.badge || ""}</span></div>
@@ -1387,7 +1387,7 @@
           title: "Are these the right fit for your application?",
           subtitle: "I can quote the top match, send datasheets/CAD, or loop in an engineer.",
           yesLabel: "Yes — get me a quote",
-          noLabel:  "Not quite — talk to an engineer",
+          noLabel: "Not quite — talk to an engineer",
           dismissLabel: "I just needed the info, thanks",
           onYes: () => {
             this.addUserMessage("Yes — get me a quote");
@@ -1555,7 +1555,7 @@
           title: "Did this help resolve it?",
           subtitle: "If you've run the checks and it's still off-spec, I'll route to a service engineer with full context.",
           yesLabel: "Yes — that solved it",
-          noLabel:  "No — needs an engineer",
+          noLabel: "No — needs an engineer",
           onYes: () => {
             this.addUserMessage("Yes — that solved it");
             this._addOutcome({

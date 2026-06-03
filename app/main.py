@@ -22,8 +22,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
 from app.config import get_settings
 from app.db import engine
+from app.routers.admin import admin_exception_handler
+from app.routers.admin import router as admin_pages_router
+from app.routers.admin_api import router as admin_api_router
 from app.routers.agent import router as agent_router
 from app.routers.tools import router as tools_router
 from app.runtime import install_async_event_loop_policy
@@ -60,6 +65,19 @@ app.add_middleware(
 
 app.include_router(tools_router)
 app.include_router(agent_router)
+
+# Admin web app (/admin). Routers + static mount MUST be registered before
+# the catch-all `/` widget mount below, or they get shadowed by it.
+app.include_router(admin_pages_router)
+app.include_router(admin_api_router)
+app.add_exception_handler(StarletteHTTPException, admin_exception_handler)
+
+_ADMIN_STATIC_DIR = Path(__file__).resolve().parent / "admin" / "static"
+app.mount(
+    "/admin/static",
+    StaticFiles(directory=_ADMIN_STATIC_DIR),
+    name="admin-static",
+)
 
 
 @app.get("/api/health")

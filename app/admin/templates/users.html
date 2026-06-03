@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Users — Kofon Admin{% endblock %}
+{% block content %}
+<h1>Admin users</h1>
+
+{% set err = request.query_params.get('err') %}
+{% if err %}
+<div class="banner err">
+  {% if err == 'exists' %}That email already exists.
+  {% elif err == 'invalid' %}Missing or invalid fields.
+  {% elif err == 'self' %}You can't disable your own account.
+  {% elif err == 'lastadmin' %}Can't disable the last active superadmin.
+  {% elif err == 'missing' %}User not found.
+  {% else %}Something went wrong.{% endif %}
+</div>
+{% endif %}
+
+<table>
+  <thead><tr><th>Email</th><th>Role</th><th>Status</th><th>Last login</th><th>Created</th><th class="right">Actions</th></tr></thead>
+  <tbody>
+    {% for u in users %}
+    <tr>
+      <td>{{ u.email }}{% if u.id == user.id %} <span class="pill">you</span>{% endif %}</td>
+      <td>{{ u.role }}</td>
+      <td>{% if u.is_active %}<span class="pill sell">active</span>{% else %}<span class="pill off">disabled</span>{% endif %}</td>
+      <td class="mono">{{ u.last_login_at.strftime('%Y-%m-%d %H:%M') if u.last_login_at else '—' }}</td>
+      <td class="mono">{{ u.created_at.strftime('%Y-%m-%d') if u.created_at else '' }}</td>
+      <td class="right">
+        {% if u.id != user.id %}
+        <form method="post" action="/admin/api/users/toggle" class="inline"
+              data-confirm="{{ 'Disable' if u.is_active else 'Enable' }} {{ u.email }}?">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="user_id" value="{{ u.id }}">
+          <button class="btn small {{ 'danger' if u.is_active else 'ok' }}">{{ 'Disable' if u.is_active else 'Enable' }}</button>
+        </form>
+        {% else %}<span class="muted">—</span>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2>Create user</h2>
+<form class="stack" method="post" action="/admin/api/users/create">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <div class="field">
+    <label for="email">Email</label>
+    <input type="email" id="email" name="email" required>
+  </div>
+  <div class="field">
+    <label for="password">Password</label>
+    <input type="password" id="password" name="password" required>
+  </div>
+  <div class="field">
+    <label for="role">Role</label>
+    <select id="role" name="role">
+      {% for r in roles %}<option value="{{ r }}" {{ 'selected' if r == 'viewer' else '' }}>{{ r }}</option>{% endfor %}
+    </select>
+    <div class="help">superadmin = full access (incl. user mgmt, backup). editor = content + routing. sales = view + notifications. viewer = read-only.</div>
+  </div>
+  <button class="btn" type="submit">Create user</button>
+</form>
+{% endblock %}

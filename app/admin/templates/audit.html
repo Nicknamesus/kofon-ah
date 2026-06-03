@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Audit log — Kofon Admin{% endblock %}
+{% block content %}
+<h1>Audit log <span class="muted" style="font-size:14px">(latest 300)</span></h1>
+<table>
+  <thead><tr><th>When</th><th>User</th><th>Action</th><th>Entity</th><th>Diff</th></tr></thead>
+  <tbody>
+    {% for r in rows %}
+    <tr>
+      <td class="mono">{{ r.created_at.strftime('%Y-%m-%d %H:%M:%S') if r.created_at else '' }}</td>
+      <td>{{ r.user_email or '—' }}</td>
+      <td class="mono">{{ r.action }}</td>
+      <td class="mono">{{ r.entity_type or '' }}{% if r.entity_id %} #{{ r.entity_id }}{% endif %}</td>
+      <td class="mono"><span class="trunc">{{ r.diff | tojson if r.diff else '' }}</span></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="muted">No audit entries yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

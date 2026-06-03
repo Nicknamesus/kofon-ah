@@ -116,7 +116,18 @@ async def handle_sell(state: AgentState) -> dict[str, Any]:
                 division_code=division.code,
             )
         )
+
+        # Stage the live admin notification in the same transaction, then
+        # publish to the in-process bus after commit. Best-effort.
+        notif_event = await _stage_sell_notification(
+            session,
+            conversation_id=conversation_id,
+            rfq_id=rfq_id,
+            division_code=division.code,
+            payload=payload,
+        )
         await session.commit()
+        _publish_notification(notif_event)
 
     return {
         "slots": {
@@ -195,7 +206,18 @@ async def handle_human_handoff(
                 division_code=division.code,
             )
         )
+
+        notif_event = await _stage_handoff_notification(
+            session,
+            conversation_id=conversation_id,
+            ticket_id=ticket_id,
+            division_code=division.code,
+            reason=reason,
+            priority=priority,
+            payload=payload,
+        )
         await session.commit()
+        _publish_notification(notif_event)
 
     return {
         "slots": {
@@ -241,6 +263,73 @@ async def handle_resolved(state: AgentState) -> dict[str, Any]:
         )
         await session.commit()
     return {}
+
+
+# ---------------- internal: admin notifications ----------------
+
+
+async def _stage_sell_notification(
+    session,
+    *,
+    conversation_id: int | None,
+    rfq_id: int | None,
+    division_code: str | None,
+    payload: LeadPayload,
+) -> dict[str, Any] | None:
+    """Stage a 'sell' notification row. Soft-fail: a notification problem
+    must never break the RFQ / user terminal card."""
+    try:
+        from app.admin import notify
+
+        return await notify.stage_sell(
+            session,
+            conversation_id=conversation_id,
+            rfq_id=rfq_id,
+            division_code=division_code,
+            sku=payload.sku,
+            company=payload.contact_company,
+        )
+    except Exception:  # noqa: BLE001
+        log.exception("failed to stage sell notification")
+        return None
+
+
+async def _stage_handoff_notification(
+    session,
+    *,
+    conversation_id: int | None,
+    ticket_id: int | None,
+    division_code: str | None,
+    reason: str | None,
+    priority: str | None,
+    payload: TicketPayload,
+) -> dict[str, Any] | None:
+    try:
+        from app.admin import notify
+
+        return await notify.stage_human_handoff(
+            session,
+            conversation_id=conversation_id,
+            ticket_id=ticket_id,
+            division_code=division_code,
+            reason=reason,
+            priority=priority,
+            company=payload.contact_company,
+        )
+    except Exception:  # noqa: BLE001
+        log.exception("failed to stage handoff notification")
+        return None
+
+
+def _publish_notification(event: dict[str, Any] | None) -> None:
+    if not event:
+        return
+    try:
+        from app.admin import notify
+
+        notify.publish(event)
+    except Exception:  # noqa: BLE001
+        log.exception("failed to publish notification")
 
 
 # ---------------- internal: provider wrappers ----------------

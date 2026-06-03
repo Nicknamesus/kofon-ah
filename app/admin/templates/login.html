@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kofon Admin — Log in</title>
+  <link rel="stylesheet" href="/admin/static/admin.css">
+</head>
+<body>
+  <div class="login-wrap">
+    <form class="login-box" method="post" action="/admin/login">
+      <h1>Kofon&nbsp;Admin</h1>
+      {% if error %}<div class="banner err">{{ error }}</div>{% endif %}
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" autocomplete="username" required autofocus>
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required>
+      </div>
+      <button class="btn" type="submit">Log in</button>
+    </form>
+  </div>
+</body>
+</html>

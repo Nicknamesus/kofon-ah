@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ 'New' if creating else 'Edit' }} {{ spec.singular }} — Kofon Admin{% endblock %}
+{% block content %}
+<h1>{{ 'New' if creating else 'Edit' }} {{ spec.singular }}</h1>
+<p><a href="/admin/content/{{ spec.key }}">← Back to {{ spec.label }}</a></p>
+
+{% if error %}<div class="banner err">{{ error }}</div>{% endif %}
+
+<form class="stack" method="post" action="/admin/api/content/{{ spec.key }}/save">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="_mode" value="{{ 'create' if creating else 'update' }}">
+  {# Carry primary key(s) so update can locate the row. #}
+  {% for c in spec.pk %}<input type="hidden" name="{{ c }}" value="{{ data.get(c, '') }}">{% endfor %}
+
+  {% for f in spec.fields %}
+    {% set val = data.get(f.name, '') %}
+    <div class="field">
+      <label for="f_{{ f.name }}">{{ f.label }}{% if f.required %} *{% endif %}</label>
+
+      {% if f.create_only and not creating %}
+        {# Natural keys / composite PK parts are immutable after creation. #}
+        <div class="ro mono">{{ val if val not in (none, '') else '—' }}</div>
+        <input type="hidden" name="{{ f.name }}" value="{{ val }}">
+
+      {% elif f.type == 'textarea' or f.type == 'json' %}
+        <textarea id="f_{{ f.name }}" name="{{ f.name }}" {% if f.type == 'json' %}spellcheck="false"{% endif %}>{{ val }}</textarea>
+
+      {% elif f.type == 'fk' %}
+        <select id="f_{{ f.name }}" name="{{ f.name }}">
+          {% if not f.required %}<option value="">— none —</option>{% endif %}
+          {% for oid, olabel in fk_opts.get(f.name, []) %}
+            <option value="{{ oid }}" {{ 'selected' if val|string == oid|string else '' }}>{{ olabel }}</option>
+          {% endfor %}
+        </select>
+
+      {% elif f.type == 'select' %}
+        <select id="f_{{ f.name }}" name="{{ f.name }}">
+          {% for oval, olabel in f.options %}
+            <option value="{{ oval }}" {{ 'selected' if val|string == oval|string else '' }}>{{ olabel }}</option>
+          {% endfor %}
+        </select>
+
+      {% elif f.type == 'int' %}
+        <input type="number" id="f_{{ f.name }}" name="{{ f.name }}" value="{{ val }}">
+
+      {% else %}
+        <input type="text" id="f_{{ f.name }}" name="{{ f.name }}" value="{{ val }}">
+      {% endif %}
+
+      {% if f.help %}<div class="help">{{ f.help }}</div>{% endif %}
+    </div>
+  {% endfor %}
+
+  <button class="btn" type="submit">{{ 'Create' if creating else 'Save changes' }}</button>
+</form>
+{% endblock %}

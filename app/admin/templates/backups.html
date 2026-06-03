@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Backups — Kofon Admin{% endblock %}
+{% block content %}
+<h1>Backups</h1>
+<p class="muted">
+  A backup bundles the full catalog/KB (exported from the DB), <code>routing.yaml</code>,
+  and the widget config into a downloadable archive. Secrets (<code>.env</code>) are excluded.
+  Restore by extracting and running <code>python -m app.seed.load --force</code>.
+</p>
+
+<div class="toolbar">
+  <form method="post" action="/admin/api/backup">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button class="btn">Create backup now</button>
+  </form>
+  <div class="spacer"></div>
+  {% if can('restart.run') %}
+  <form method="post" action="/admin/api/restart" data-confirm="Restart the bot?">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button class="btn ghost" title="Deferred until the supervisor model is chosen">Restart bot</button>
+  </form>
+  {% endif %}
+</div>
+
+<table>
+  <thead><tr><th>File</th><th>Size</th><th>Created (UTC)</th><th class="right"></th></tr></thead>
+  <tbody>
+    {% for b in backups %}
+    <tr>
+      <td class="mono">{{ b.name }}</td>
+      <td>{{ b.size_kb }} KB</td>
+      <td class="mono">{{ b.created_at }}</td>
+      <td class="right"><a class="btn small ghost" href="/admin/api/backup/download?name={{ b.name }}">Download</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="muted">No backups yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

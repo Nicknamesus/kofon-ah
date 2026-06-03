@@ -276,7 +276,31 @@ async def load_problems_and_solutions(session: AsyncSession) -> tuple[int, int]:
 # ----------------------- driver -----------------------
 
 
-async def run() -> None:
+async def _already_seeded(session: AsyncSession) -> bool:
+    """True if content already exists. With DB-authoritative content (admin
+    edits live in the DB), re-running the loader would clobber those edits —
+    so by default we only seed an empty DB. Pass --force to override."""
+    from sqlalchemy import func
+
+    count = (
+        await session.execute(select(func.count()).select_from(ProductType))
+    ).scalar_one()
+    return bool(count and count > 0)
+
+
+async def run(*, force: bool = False) -> None:
+    # Guard: don't clobber DB-authoritative content on redeploys. See
+    # ADMIN_INTERFACE_PLAN.md §3.1.
+    if not force:
+        async with SessionLocal() as session:
+            if await _already_seeded(session):
+                print(
+                    "DB already has content — skipping seed (DB is authoritative). "
+                    "Use --force to reload from seed/ and overwrite live edits."
+                )
+                await engine.dispose()
+                return
+
     print(f"Seeding from {SEED_ROOT}")
     async with SessionLocal() as session:
         mct = await load_main_conversation_types(session)
@@ -316,8 +340,18 @@ async def run() -> None:
 
 
 def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Load seed content into Postgres.")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Reload from seed/ even if the DB already has content "
+        "(overwrites live admin edits).",
+    )
+    args = parser.parse_args()
     try:
-        asyncio.run(run())
+        asyncio.run(run(force=args.force))
     except Exception as exc:  # noqa: BLE001
         print(f"Seed failed: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc
