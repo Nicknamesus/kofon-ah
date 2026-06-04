@@ -13,3 +13,4 @@ venv/
 .idea/
 
 TEST_RUN.md
+NG_instance.pem

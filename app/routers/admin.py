@@ -143,37 +143,15 @@ async def login_submit(
 
 @router.get("", response_class=HTMLResponse, name="dashboard")
 @router.get("/", response_class=HTMLResponse, include_in_schema=False)
-async def dashboard_view(request: Request, ctx: AdminContext = Depends(require_admin)):
-    async with SessionLocal() as session:
-        n_products = (
-            await session.execute(select(func.count()).select_from(Product))
-        ).scalar_one()
-        n_problems = (
-            await session.execute(select(func.count()).select_from(ProblemType))
-        ).scalar_one()
-        n_convos = (
-            await session.execute(select(func.count()).select_from(Conversation))
-        ).scalar_one()
-        n_unread = (
-            await session.execute(
-                select(func.count()).select_from(Notification).where(
-                    Notification.read_at.is_(None)
-                )
-            )
-        ).scalar_one()
-        recent = (
-            await session.execute(
-                select(Notification).order_by(Notification.created_at.desc()).limit(8)
-            )
-        ).scalars().all()
-    return render(request, "dashboard.html", ctx, {
-        "stats": {
-            "products": n_products, "problems": n_problems,
-            "conversations": n_convos, "unread": n_unread,
-        },
-        "recent": recent,
-        "embedding_provider": get_settings().embedding_provider,
-    })
+async def admin_spa_shell(request: Request):
+    """Serve the single-page admin console shell.
+
+    Auth is intentionally NOT required here: `app/admin/static/app.js`
+    bootstraps from `GET /admin/api/me` and renders its own branded login
+    screen on 401. The shell is just static markup + asset links — all data
+    behind it is permission-gated at the API layer.
+    """
+    return templates.TemplateResponse(request=request, name="app.html", context={})
 
 
 # ---- notifications page --------------------------------------------------
