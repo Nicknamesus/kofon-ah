@@ -363,6 +363,21 @@ function can(permission) {
   return Array.isArray(state.permissions) && state.permissions.includes(permission);
 }
 
+// ---- interactive switches ------------------------------------------------
+// Toggle state persists across re-renders (which rebuild root.innerHTML) by
+// living in this module-level map rather than in the DOM. `key` identifies the
+// switch; `fallbackOn` is its default until the user flips it.
+const switchStates = new Map();
+
+function switchIsOn(key, fallbackOn) {
+  return switchStates.has(key) ? switchStates.get(key) : !!fallbackOn;
+}
+
+function switchControl(key, fallbackOn) {
+  const on = switchIsOn(key, fallbackOn);
+  return `<button type="button" class="toggle ${on ? "on" : ""}" role="switch" aria-checked="${on}" data-switch="${escapeHtml(key)}"></button>`;
+}
+
 // Resolve identity + permissions, or fall back to the login screen on 401.
 async function bootstrap() {
   try {
@@ -965,7 +980,7 @@ function loginPage() {
       </div>
       <section class="login-brand-panel">
         <div class="brand-lockup large">
-          <span class="brand-mark">KF</span>
+          <img class="brand-mark" src="/agent-profilepic.jpeg" alt="KOFON AI Agent" />
           <div>
             <strong>KOFON</strong>
             <small>AI Agent Admin</small>
@@ -1016,7 +1031,7 @@ function sidebar() {
   return `
     <aside class="sidebar">
       <div class="brand-lockup">
-        <span class="brand-mark">KF</span>
+        <img class="brand-mark" src="/agent-profilepic.jpeg" alt="KOFON AI Agent" />
         <div>
           <strong>KOFON</strong>
           <small>AI Agent Admin</small>
@@ -1521,7 +1536,7 @@ function faqManagementPage() {
                       <td>${escapeHtml(faq.category)}</td>
                       <td>${escapeHtml(faq.uses)}</td>
                       <td>${pill(faq.priority)}</td>
-                      <td><span class="toggle ${faq.enabled ? "on" : ""}"></span></td>
+                      <td>${switchControl("faq:" + faq.question, faq.enabled)}</td>
                       <td><button class="text-button" data-action="faq-save">Edit</button></td>
                     </tr>
                   `
@@ -1603,7 +1618,7 @@ function control(title, enabled, detail) {
         <strong>${escapeHtml(title)}</strong>
         <p>${escapeHtml(detail)}</p>
       </div>
-      <span class="toggle ${enabled ? "on" : ""}"></span>
+      ${switchControl("ctl:" + title, enabled)}
     </div>
   `;
 }
@@ -2045,8 +2060,28 @@ root.addEventListener("click", (event) => {
     return;
   }
 
+  // Interactive switches: flip persisted state and re-render.
+  const switchEl = event.target.closest("[data-switch]");
+  if (switchEl) {
+    const key = switchEl.dataset.switch;
+    const next = !switchEl.classList.contains("on");
+    switchStates.set(key, next);
+    render();
+    showToast(next ? msg("Turned on.", "已开启。") : msg("Turned off.", "已关闭。"));
+    return;
+  }
+
   const actionButton = event.target.closest("[data-action]");
-  if (!actionButton) return;
+  if (!actionButton) {
+    // Nothing is allowed to feel dead: any standalone control with no wired
+    // behaviour yet acknowledges the click instead of silently ignoring it.
+    // (Form buttons are excluded — their submit handler owns them.)
+    const ctrl = event.target.closest("button, .segmented button, .text-button");
+    if (ctrl && !ctrl.disabled && !ctrl.closest("form")) {
+      showToast(msg("This feature is in development.", "该功能正在开发中。"));
+    }
+    return;
+  }
 
   const action = actionButton.dataset.action;
   if (action === "toggle-language") {

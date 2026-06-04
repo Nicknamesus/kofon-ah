@@ -184,6 +184,18 @@ tbody tr.selected {
   font-size: 14px;
   font-weight: 800;
   box-shadow: 0 12px 26px rgba(29, 140, 255, 0.25);
+  overflow: hidden;
+}
+
+/* When the brand mark is the chatbot avatar image, fill the square cleanly. */
+img.brand-mark {
+  object-fit: cover;
+  padding: 0;
+}
+
+.brand-lockup.large img.brand-mark {
+  width: 56px;
+  height: 56px;
 }
 
 .brand-lockup strong {
@@ -1410,6 +1422,13 @@ tr[data-conversation] {
   border-radius: 999px;
   background: #cbd5e1;
   padding: 3px;
+  border: none;
+  box-sizing: border-box;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  align-items: center;
+  transition: background 160ms ease;
 }
 
 .toggle::before {
