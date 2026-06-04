@@ -6,7 +6,8 @@ WORKDIR /app
 
 RUN python -m venv .venv
 COPY pyproject.toml ./
-RUN .venv/bin/pip install .
+RUN .venv/bin/pip install ".[standard]"
+
 FROM python:3.11-slim
 WORKDIR /app
 COPY --from=builder /app/.venv .venv/
