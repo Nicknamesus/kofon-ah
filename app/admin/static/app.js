@@ -112,7 +112,7 @@ let conversations = [
   }
 ];
 
-const products = [
+let products = [
   {
     name: "F Series Precision Planetary Reducer",
     category: "Precision Planetary Reducer",
@@ -181,7 +181,7 @@ const products = [
   }
 ];
 
-const documents = [
+let documents = [
   { name: "F Series Planetary Reducer Product Manual.pdf", category: "Product Manual", type: "PDF", status: "Enabled", updated: "2026-06-02", owner: "Product Team" },
   { name: "AGV Drive Wheel Selection Parameters.xlsx", category: "Parameter Sheet", type: "Excel", status: "Enabled", updated: "2026-06-01", owner: "Application Engineering" },
   { name: "KH Series Low Backlash Specification.docx", category: "Technical Spec", type: "Word", status: "Disabled", updated: "2026-05-24", owner: "R&D" },
@@ -197,7 +197,7 @@ const faqs = [
   { question: "How to compare harmonic reducer and planetary reducer?", category: "Product Knowledge", uses: 176, priority: "Medium", enabled: false }
 ];
 
-const leads = [
+let leads = [
   {
     customer: "Maya Patel",
     company: "Apex Automation",
@@ -314,7 +314,7 @@ const customers = [
   { company: "Apex Automation", region: "Export", contacts: 1, products: "Servo Electric Cylinder", stage: "Quotation", health: "Hot" }
 ];
 
-const logs = [
+let logs = [
   { time: "2026-06-04 10:42:31", actor: "AI Agent", action: "Created sales lead", target: "Wuhan Smart Logistics Co.", result: "Success" },
   { time: "2026-06-04 10:38:10", actor: "Admin / Iris", action: "Enabled document", target: "F Series Product Manual", result: "Success" },
   { time: "2026-06-04 09:57:44", actor: "QA / Nina", action: "Marked answer incorrect", target: "rev-001", result: "Pending review" },
@@ -350,7 +350,7 @@ let toastTimer;
 async function api(path, opts = {}) {
   const headers = Object.assign({ Accept: "application/json" }, opts.headers || {});
   const method = (opts.method || "GET").toUpperCase();
-  if (method !== "GET" && opts.body !== undefined) {
+  if (method !== "GET" && opts.body !== undefined && !headers["Content-Type"]) {
     headers["Content-Type"] = "application/json";
   }
   if (method !== "GET" && state.csrf) {
@@ -358,6 +358,20 @@ async function api(path, opts = {}) {
   }
   return fetch(path, Object.assign({ credentials: "same-origin" }, opts, { headers, method }));
 }
+
+// POST application/x-www-form-urlencoded — for the existing admin_api write
+// endpoints (users create/toggle, notification ack) which read request.form().
+async function apiForm(path, fields) {
+  return api(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams(fields).toString()
+  });
+}
+
+// Admin-user data for the User Permissions section.
+let adminUsers = [];
+let adminRoles = ["superadmin", "editor", "sales", "viewer"];
 
 function can(permission) {
   return Array.isArray(state.permissions) && state.permissions.includes(permission);
@@ -394,6 +408,9 @@ async function bootstrap() {
       permissions: data.permissions || [],
       csrf: data.csrf_token
     });
+    // Don't strand the user on a section their role can't see.
+    const perm = NAV_PERMISSION[state.page];
+    if (perm && !can(perm)) state.page = "Dashboard";
     render();
     loadSection(state.page);
   } catch (err) {
@@ -409,6 +426,50 @@ function loadSection(page) {
     return;
   }
   if (page === "User Conversations") return loadConversations();
+  if (page === "Product Management") return loadProducts();
+  if (page === "Knowledge Base") return loadKb();
+  if (page === "Sales Leads") return loadLeads();
+  if (page === "User Permissions") return loadUsers();
+  if (page === "Operation Logs") return loadAudit();
+}
+
+// Generic list loader: fetch JSON, hand it to `assign`, then re-render.
+async function loadList(path, assign) {
+  try {
+    const res = await api(path);
+    if (!res.ok) return;
+    assign(await res.json());
+    render();
+  } catch (err) {
+    /* keep whatever is currently rendered */
+  }
+}
+
+function loadProducts() {
+  return loadList("/admin/api/content/products", (d) => {
+    if (Array.isArray(d.products)) products = d.products;
+  });
+}
+function loadKb() {
+  return loadList("/admin/api/content/kb", (d) => {
+    if (Array.isArray(d.documents)) documents = d.documents;
+  });
+}
+function loadLeads() {
+  return loadList("/admin/api/leads", (d) => {
+    if (Array.isArray(d.leads)) leads = d.leads;
+  });
+}
+function loadAudit() {
+  return loadList("/admin/api/audit", (d) => {
+    if (Array.isArray(d.logs)) logs = d.logs;
+  });
+}
+function loadUsers() {
+  return loadList("/admin/api/users", (d) => {
+    if (Array.isArray(d.users)) adminUsers = d.users;
+    if (Array.isArray(d.roles)) adminRoles = d.roles;
+  });
 }
 
 async function loadDashboard() {
@@ -1039,6 +1100,10 @@ function sidebar() {
       </div>
       <nav class="nav-list" aria-label="Main navigation">
         ${navItems
+          .filter((item) => {
+            const perm = NAV_PERMISSION[item.id];
+            return !perm || can(perm);
+          })
           .map(
             (item) => `
               <button class="nav-item ${state.page === item.id ? "active" : ""}" data-page="${escapeHtml(item.id)}">
@@ -1660,7 +1725,7 @@ function salesLeadsPage() {
                     <td>${escapeHtml(lead.last)}</td>
                     <td>${pill(lead.status)}</td>
                     <td>${escapeHtml(lead.owner)}</td>
-                    <td><button class="text-button" data-action="lead-action">Follow up</button></td>
+                    <td><button class="text-button" data-action="lead-action" ${lead.id != null ? `data-lead="${escapeHtml(lead.id)}"` : ""}>${lead.status === "Acknowledged" ? "View" : "Follow up"}</button></td>
                   </tr>
                 `
               )
@@ -1768,7 +1833,8 @@ function answerReviewPage() {
 
 function manualTakeoverPage() {
   const active = takeoverSessions[0];
-  const chat = conversations[0];
+  const chat = conversations[0] || { messages: [] };
+  const chatMessages = Array.isArray(chat.messages) ? chat.messages : [];
 
   return `
     ${pageHeader(
@@ -1809,7 +1875,7 @@ function manualTakeoverPage() {
           ${pill("Human taking over")}
         </div>
         <div class="chat-stream takeover">
-          ${chat.messages
+          ${chatMessages
             .map(
               (message) => `
                 <div class="message ${message.from}">
@@ -1881,32 +1947,91 @@ function customerManagementPage() {
 }
 
 function permissionsPage() {
-  const roles = [
-    { role: "Super Admin", users: 2, scope: "All modules, settings, permission management" },
-    { role: "Product Manager", users: 6, scope: "Products, knowledge base, FAQ, answer review" },
-    { role: "Sales", users: 18, scope: "Conversations, leads, customers, manual takeover" },
-    { role: "Service Engineer", users: 9, scope: "Manual takeover, technical review, answer correction" }
-  ];
+  const roleScope = {
+    superadmin: "All modules, settings, and permission management.",
+    editor: "Products, knowledge base, routing, conversations, exports.",
+    sales: "Conversations, leads, and notifications.",
+    viewer: "Read-only conversations and notifications."
+  };
+  const counts = {};
+  adminUsers.forEach((u) => { counts[u.role] = (counts[u.role] || 0) + 1; });
+
+  const roleCards = adminRoles
+    .map(
+      (role) => `
+        <article class="panel role-card">
+          <h2>${escapeHtml(role)}</h2>
+          <strong>${counts[role] || 0} users</strong>
+          <p>${escapeHtml(roleScope[role] || "")}</p>
+          ${progressBar(Math.min(100, (counts[role] || 0) * 20))}
+        </article>
+      `
+    )
+    .join("");
+
+  const rows = adminUsers.length
+    ? adminUsers
+        .map(
+          (u) => `
+            <tr>
+              <td><strong>${escapeHtml(u.email)}</strong></td>
+              <td>${pill(u.role)}</td>
+              <td>${u.is_active ? pill("Active") : pill("Disabled")}</td>
+              <td>${escapeHtml(u.last_login || "—")}</td>
+              <td>${
+                u.is_self
+                  ? `<span class="muted">${msg("You", "当前账号")}</span>`
+                  : `<button class="text-button" data-action="user-toggle" data-user="${escapeHtml(u.id)}">${
+                      u.is_active ? msg("Disable", "停用") : msg("Enable", "启用")
+                    }</button>`
+              }</td>
+            </tr>
+          `
+        )
+        .join("")
+    : `<tr><td colspan="5" class="table-empty">${msg("No admin users.", "暂无管理员账号。")}</td></tr>`;
+
   return `
     ${pageHeader(
       "User Permissions",
-      "Control administrator roles, data scope, and operation privileges.",
-      `<button class="primary-button">Create Role</button>`
+      "Control administrator accounts, roles, and access.",
+      ""
     )}
-    <section class="role-grid">
-      ${roles
-        .map(
-          (role) => `
-            <article class="panel role-card">
-              <h2>${escapeHtml(role.role)}</h2>
-              <strong>${escapeHtml(role.users)} users</strong>
-              <p>${escapeHtml(role.scope)}</p>
-              ${progressBar(Math.min(100, role.users * 10))}
-              <button class="text-button">Manage permissions</button>
-            </article>
-          `
-        )
-        .join("")}
+    <section class="role-grid">${roleCards}</section>
+    <section class="conversation-shell">
+      <article class="panel">
+        <div class="table-toolbar">
+          <div>
+            <h2>${msg("Administrators", "管理员")}</h2>
+            <p>${adminUsers.length} ${msg("accounts", "个账号")}</p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>${msg("Email", "邮箱")}</th>
+                <th>${msg("Role", "角色")}</th>
+                <th>${msg("Status", "状态")}</th>
+                <th>${msg("Last login", "最近登录")}</th>
+                <th>${msg("Action", "操作")}</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </article>
+      <aside class="panel form-panel">
+        <h2>${msg("Create administrator", "新建管理员")}</h2>
+        <form class="form-stack" data-form="user-create">
+          <label><span>${msg("Email", "邮箱")}</span><input name="email" type="email" required placeholder="you@kofon.com" /></label>
+          <label><span>${msg("Password", "密码")}</span><input name="password" type="password" required /></label>
+          <label><span>${msg("Role", "角色")}</span>
+            <select name="role">${adminRoles.map((r) => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join("")}</select>
+          </label>
+          <button class="primary-button" type="submit">${msg("Create", "创建")}</button>
+        </form>
+      </aside>
     </section>
   `;
 }
@@ -1983,6 +2108,38 @@ function operationLogsPage() {
   `;
 }
 
+// Sections that have no backend yet: they render the demo UI on sample data and
+// carry a clear "Preview" banner so mock numbers aren't mistaken for live ones.
+const PREVIEW_PAGES = new Set([
+  "Manual Takeover",
+  "FAQ Management",
+  "AI Agent Settings",
+  "Customer Management",
+  "Analytics",
+  "Answer Review",
+  "System Settings"
+]);
+
+// Nav visibility: a section is shown only if the user holds its permission.
+// Sections not listed (Dashboard + preview-only ones) are visible to everyone.
+const NAV_PERMISSION = {
+  "User Conversations": "conversations.read",
+  "Manual Takeover": "conversations.read",
+  "Product Management": "content.read",
+  "Knowledge Base": "content.read",
+  "FAQ Management": "content.read",
+  "Sales Leads": "notifications.read",
+  "User Permissions": "users.manage",
+  "Operation Logs": "users.manage"
+};
+
+function previewBanner() {
+  return `<div class="preview-banner">${msg(
+    "Preview — this section is in development and shows sample data, not live records.",
+    "预览 — 此模块仍在开发中，显示为示例数据，并非真实记录。"
+  )}</div>`;
+}
+
 function renderPage() {
   const pages = {
     Dashboard: dashboardPage,
@@ -2000,7 +2157,8 @@ function renderPage() {
     "System Settings": systemSettingsPage,
     "Operation Logs": operationLogsPage
   };
-  return (pages[state.page] || dashboardPage)();
+  const body = (pages[state.page] || dashboardPage)();
+  return PREVIEW_PAGES.has(state.page) ? previewBanner() + body : body;
 }
 
 function render() {
@@ -2039,7 +2197,22 @@ root.addEventListener("submit", (event) => {
 
   if (form.dataset.form === "product") {
     setState({ productModal: false });
-    showToast(msg("Product saved to mock catalog.", "产品已保存到原型产品库。"));
+    showToast(msg("Product editing is in development.", "产品编辑功能正在开发中。"));
+  }
+
+  if (form.dataset.form === "user-create") {
+    const email = (form.email?.value || "").trim();
+    const password = form.password?.value || "";
+    const role = form.role?.value || "viewer";
+    const button = form.querySelector('button[type="submit"]');
+    if (button) button.disabled = true;
+    apiForm("/admin/api/users/create", { email, password, role, csrf_token: state.csrf })
+      .then(() => {
+        loadUsers();
+        showToast(msg("Administrator saved.", "管理员已保存。"));
+      })
+      .catch(() => showToast(msg("Could not create administrator.", "无法创建管理员。")))
+      .finally(() => { if (button) button.disabled = false; });
   }
 });
 
@@ -2073,10 +2246,18 @@ root.addEventListener("click", (event) => {
 
   const actionButton = event.target.closest("[data-action]");
   if (!actionButton) {
-    // Nothing is allowed to feel dead: any standalone control with no wired
-    // behaviour yet acknowledges the click instead of silently ignoring it.
+    // Segmented filters (All / Active / Draft, lead levels, …): give an
+    // immediate visual response by moving the active state to the clicked tab.
+    const seg = event.target.closest(".segmented button");
+    if (seg && !seg.disabled) {
+      seg.parentElement.querySelectorAll("button").forEach((b) => b.classList.remove("active"));
+      seg.classList.add("active");
+      return;
+    }
+    // Nothing else is allowed to feel dead: any standalone control with no
+    // wired behaviour yet acknowledges the click instead of ignoring it.
     // (Form buttons are excluded — their submit handler owns them.)
-    const ctrl = event.target.closest("button, .segmented button, .text-button");
+    const ctrl = event.target.closest("button, .text-button, .session-item, .icon-button");
     if (ctrl && !ctrl.disabled && !ctrl.closest("form")) {
       showToast(msg("This feature is in development.", "该功能正在开发中。"));
     }
@@ -2120,6 +2301,24 @@ root.addEventListener("click", (event) => {
     const status = root.querySelector('[data-field="conversation-status"]')?.value || "All";
     setState({ conversationSearch: search, conversationStatus: status });
     loadConversations();
+    return;
+  }
+  if (action === "user-toggle") {
+    const id = actionButton.dataset.user;
+    apiForm("/admin/api/users/toggle", { user_id: id, csrf_token: state.csrf })
+      .then(() => { loadUsers(); showToast(msg("Account updated.", "账号已更新。")); })
+      .catch(() => showToast(msg("Could not update account.", "无法更新账号。")));
+    return;
+  }
+  if (action === "lead-action") {
+    const id = actionButton.dataset.lead;
+    if (id) {
+      apiForm("/admin/api/notifications/ack", { notification_id: id, csrf_token: state.csrf })
+        .then(() => { loadLeads(); showToast(msg("Lead acknowledged.", "线索已确认。")); })
+        .catch(() => showToast(msg("Could not update lead.", "无法更新线索。")));
+    } else {
+      showToast(msg("This feature is in development.", "该功能正在开发中。"));
+    }
     return;
   }
 
