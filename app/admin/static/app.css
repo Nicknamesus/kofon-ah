@@ -1012,6 +1012,9 @@ mark.page-find-hit.current {
 .progress span {
   display: block;
   height: 100%;
+  /* Reset: `.bar-row span` sets margin-top:3px (meant for the label caption),
+     which otherwise pushes the fill down and leaves a grey gap at the top. */
+  margin: 0;
   min-width: 4px;
   /* Square fill: the track's overflow:hidden rounds the outer (left) corners,
      while the right edge stays a clean vertical line. An inherited 999px radius
