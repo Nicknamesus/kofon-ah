@@ -18,8 +18,8 @@ const navItems = [
 const navBadges = {
   "User Conversations": 5,
   "Manual Takeover": 3,
-  "Customers & Leads": 8,
-  "Answer Review": 4
+  "Customers & Leads": 8
+  // "Answer Review" is derived from answerReviews.length in sidebar()
 };
 
 // Tab order is user-customizable via drag-and-drop and persisted per browser.
@@ -880,9 +880,11 @@ const zhText = {
   "PNG or JPG. The current avatar is shown on the left.": "支持 PNG 或 JPG。当前头像显示在左侧。",
   "English": "英语",
   "Chinese": "中文",
-  "Spanish": "西班牙语",
   "German": "德语",
+  "French": "法语",
+  "Russian": "俄语",
   "Japanese": "日语",
+  "Korean": "韩语",
   "Unified view of customer accounts and AI-detected sales leads.": "客户账户与 AI 识别销售线索的统一视图。",
   "Customer & Lead Pipeline": "客户与线索管道",
   "Most Interested Product Type": "最感兴趣的产品类型",
@@ -1217,7 +1219,7 @@ function sidebar() {
           })
           .map(
             (item) => {
-              const badge = navBadges[item.id];
+              const badge = item.id === "Answer Review" ? answerReviews.length : navBadges[item.id];
               return `
               <button class="nav-item ${state.page === item.id ? "active" : ""}" data-page="${escapeHtml(item.id)}" data-nav-id="${escapeHtml(item.id)}" draggable="true">
                 <span class="nav-indicator"></span>
@@ -1823,12 +1825,15 @@ function aiSettingsPage() {
 }
 
 // Preconfigured languages the admin can switch on or off for the agent.
+// Mirrors the backend's SUPPORTED_LANGUAGES (app/i18n.py).
 const agentLanguages = [
   { id: "English", on: true },
   { id: "Chinese", on: true },
-  { id: "Spanish", on: false },
   { id: "German", on: false },
-  { id: "Japanese", on: false }
+  { id: "French", on: false },
+  { id: "Russian", on: false },
+  { id: "Japanese", on: false },
+  { id: "Korean", on: false }
 ];
 
 function languageToggleList() {
@@ -1984,7 +1989,7 @@ function analyticsPage() {
             <p>Which KOFON lines are driving demand</p>
           </div>
         </div>
-        ${barList(analytics.productConsults, 42)}
+        ${barList(analytics.productConsults, analytics.productConsults.reduce((sum, item) => sum + item.value, 0))}
       </article>
       <article class="panel">
         <div class="panel-header">
@@ -1993,7 +1998,7 @@ function analyticsPage() {
             <p>Used for FAQ and knowledge base improvement</p>
           </div>
         </div>
-        ${barList(analytics.questionFrequency, 36)}
+        ${barList(analytics.questionFrequency, analytics.questionFrequency.reduce((sum, item) => sum + item.value, 0))}
       </article>
     </section>
   `;

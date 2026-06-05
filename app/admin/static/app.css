@@ -1013,7 +1013,10 @@ mark.page-find-hit.current {
   display: block;
   height: 100%;
   min-width: 4px;
-  border-radius: inherit;
+  /* Square fill: the track's overflow:hidden rounds the outer (left) corners,
+     while the right edge stays a clean vertical line. An inherited 999px radius
+     would round the fill's right corners and let grey show through the notches. */
+  border-radius: 0;
   background: linear-gradient(90deg, var(--blue-2), var(--cyan));
 }
 
