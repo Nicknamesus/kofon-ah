@@ -472,6 +472,7 @@ function loadSection(page) {
   if (page === "Customers & Leads") return loadLeads();
   if (page === "User Permissions") return loadUsers();
   if (page === "Operation Logs") return loadAudit();
+  if (page === "AI Agent Settings") return loadAgentSettings();
 }
 
 // Generic list loader: fetch JSON, hand it to `assign`, then re-render.
@@ -511,6 +512,55 @@ function loadUsers() {
     if (Array.isArray(d.users)) adminUsers = d.users;
     if (Array.isArray(d.roles)) adminRoles = d.roles;
   });
+}
+// Seed the toggle map from server truth so the switches mirror what the live
+// agent is actually doing (not stale client state, and not a value the backend
+// normalized away — e.g. it always re-enables the default language).
+function seedAgentSettingToggles() {
+  AGENT_LANGUAGES.forEach((l) =>
+    switchStates.set("lang:" + l.code, agentSettings.enabled_languages.includes(l.code))
+  );
+  switchStates.set("ctl:Auto-create sales lead", !!agentSettings.auto_create_lead);
+  switchStates.set("ctl:Require confidence threshold", !!agentSettings.require_confidence_threshold);
+}
+
+function loadAgentSettings() {
+  return loadList("/admin/api/agent-settings", (d) => {
+    if (!d || !d.settings) return;
+    agentSettings = { ...agentSettings, ...d.settings };
+    seedAgentSettingToggles();
+  });
+}
+
+// Collect the form + toggle state and persist it to the live agent.
+function saveAgentSettings(button) {
+  const nameInput = root.querySelector('[data-field="agent-name"]');
+  const payload = {
+    agent_name: (nameInput && nameInput.value.trim()) || agentSettings.agent_name,
+    enabled_languages: AGENT_LANGUAGES.filter((l) =>
+      switchIsOn("lang:" + l.code, agentSettings.enabled_languages.includes(l.code))
+    ).map((l) => l.code),
+    auto_create_lead: switchIsOn("ctl:Auto-create sales lead", agentSettings.auto_create_lead),
+    require_confidence_threshold: switchIsOn(
+      "ctl:Require confidence threshold",
+      agentSettings.require_confidence_threshold
+    )
+  };
+  if (button) button.disabled = true;
+  api("/admin/api/agent-settings", { method: "PUT", body: JSON.stringify(payload) })
+    .then((res) => {
+      if (!res.ok) throw new Error(String(res.status));
+      return res.json();
+    })
+    .then((data) => {
+      if (data && data.settings) {
+        agentSettings = { ...agentSettings, ...data.settings };
+        seedAgentSettingToggles(); // reflect any server-side normalization
+      }
+      showToast(msg("Agent settings saved.", "智能体设置已保存。"));
+    })
+    .catch(() => showToast(msg("Could not save agent settings.", "无法保存智能体设置。")))
+    .finally(() => { if (button) button.disabled = false; });
 }
 
 async function loadDashboard() {
@@ -559,6 +609,53 @@ async function loadConversationDetail(id) {
   } catch (err) {
     /* ignore */
   }
+}
+
+// ---- live conversations --------------------------------------------------
+// New conversations and messages land in the DB from the chat widget; the SPA
+// polls so the admin sees them without a manual refresh. We only repaint when
+// the list actually changes (id / last-activity time / status) and never while
+// a field is focused, so the refresh stays invisible until there's something
+// new to show.
+const CONVERSATION_POLL_MS = 6000;
+
+function conversationsSignature(list) {
+  return list.map((c) => `${c.id}:${c.time}:${c.status}`).join("|");
+}
+
+async function refreshConversations() {
+  // Don't yank focus or reset a half-typed search / reply / note.
+  const active = document.activeElement;
+  if (active && ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName)) return;
+  try {
+    const params = new URLSearchParams({
+      q: state.conversationSearch || "",
+      status_filter: state.conversationStatus || "All"
+    });
+    const res = await api("/admin/api/conversations?" + params.toString());
+    if (!res.ok) return;
+    const next = (await res.json()).conversations || [];
+    if (conversationsSignature(next) === conversationsSignature(conversations)) return;
+    conversations = next;
+    if (!conversations.some((c) => c.id === state.selectedConversationId)) {
+      state.selectedConversationId = conversations[0] ? conversations[0].id : null;
+    }
+    render();
+    // Pull the open transcript again so new messages in it appear live too.
+    if (state.selectedConversationId) loadConversationDetail(state.selectedConversationId);
+  } catch (err) {
+    /* keep whatever is rendered */
+  }
+}
+
+function startConversationPolling() {
+  window.setInterval(() => {
+    if (!state.authenticated) return;
+    // Only the pages that actually show conversations need the live feed.
+    if (state.page !== "Dashboard" && state.page !== "User Conversations") return;
+    if (document.hidden) return; // pause while the tab is backgrounded
+    refreshConversations();
+  }, CONVERSATION_POLL_MS);
 }
 
 document.documentElement.lang = state.lang === "zh" ? "zh-CN" : "en";
@@ -1016,6 +1113,12 @@ function pill(text, extra = "") {
   return `<span class="pill ${cssToken(text)} ${extra}">${escapeHtml(text)}</span>`;
 }
 
+// Small "Live" badge with a pulsing dot — signals a view that refreshes on its
+// own (e.g. User Conversations polling for new records).
+function liveBadge() {
+  return `<span class="live-badge"><span class="live-dot"></span>${msg("Live", "实时")}</span>`;
+}
+
 function progressBar(value) {
   return `
     <div class="progress" aria-label="${value}%">
@@ -1024,12 +1127,12 @@ function progressBar(value) {
   `;
 }
 
-function pageHeader(title, subtitle, actions = "") {
+function pageHeader(title, subtitle, actions = "", badge = "") {
   return `
     <div class="page-header">
       <div>
         <p class="eyebrow">KOFON AI Agent Admin</p>
-        <h1>${escapeHtml(title)}</h1>
+        <div class="page-title-row"><h1>${escapeHtml(title)}</h1>${badge}</div>
         <p>${escapeHtml(subtitle)}</p>
       </div>
       <div class="page-actions">${actions}</div>
@@ -1105,8 +1208,8 @@ function lineChart(values, label = "Conversation trend", opts = {}) {
     <svg class="line-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(label)}">
       <defs>
         <linearGradient id="lineFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#132178" stop-opacity="0.28" />
-          <stop offset="100%" stop-color="#132178" stop-opacity="0" />
+          <stop offset="0%" stop-color="#1d8cff" stop-opacity="0.28" />
+          <stop offset="100%" stop-color="#1d8cff" stop-opacity="0" />
         </linearGradient>
       </defs>
       <g class="grid-lines">${gridY}</g>
@@ -1114,7 +1217,7 @@ function lineChart(values, label = "Conversation trend", opts = {}) {
       ${yCaption}
       ${xCaption}
       <polyline points="${points} ${xAt(values.length - 1)},${padT + plotH} ${padL},${padT + plotH}" fill="url(#lineFill)" stroke="none"></polyline>
-      <polyline points="${points}" fill="none" stroke="#132178" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+      <polyline points="${points}" fill="none" stroke="#1d8cff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
       ${values
         .map((value, index) => `<circle cx="${xAt(index)}" cy="${yAt(value)}" r="4"><title>${escapeHtml(String(value))}</title></circle>`)
         .join("")}
@@ -1147,7 +1250,7 @@ function barList(items, maxValue = Math.max(...items.map((item) => item.value ||
 
 // Palette for pie/donut slices — distinct, readable hues that share the deck's
 // blue/teal family so the charts still feel on-brand.
-const PIE_COLORS = ["#132178", "#16b8a6", "#7c5cff", "#f5a623", "#ef5da8", "#0a64d8", "#32c5ff", "#9bb2cf"];
+const PIE_COLORS = ["#1d8cff", "#16b8a6", "#7c5cff", "#f5a623", "#ef5da8", "#0a64d8", "#32c5ff", "#9bb2cf"];
 
 // Donut/pie counterpart to barList(). Each item is one coloured slice sized by
 // its share of `opts.total` (defaults to the sum of values). If the values fall
@@ -1395,11 +1498,11 @@ function dashboardPage() {
         ${pieChart(
           [
             // Correct answers and Manual transfer are both counted as resolved
-            // for now, so both get a "success" green — a slightly lighter shade
+            // for now, so both get a light-blue "success" tone — a brighter cyan
             // for transfers keeps them distinguishable. Review queue stays
             // neutral grey as the still-unresolved remainder.
-            { label: "Correct answers", value: 1191, count: "1,191", color: "#12805c" },
-            { label: "Manual transfer", value: 72, count: "72", color: "#4cc4a3" },
+            { label: "Correct answers", value: 1191, count: "1,191", color: "#1d8cff" },
+            { label: "Manual transfer", value: 72, count: "72", color: "#32c5ff" },
             { label: "Review queue", value: 21, count: "21", color: "#9bb2cf" }
           ],
           { centerLabel: "92.8%" }
@@ -1559,7 +1662,8 @@ function userConversationsPage() {
     ${pageHeader(
       "User Conversations",
       "Review AI customer service records, qualify demand, and improve answer quality.",
-      `<button class="secondary-button">Batch Export</button>`
+      `<button class="secondary-button">Batch Export</button>`,
+      liveBadge()
     )}
     <section class="conversation-shell">
       <article class="panel conversation-list-panel">
@@ -1721,7 +1825,7 @@ function productModal() {
   `;
 }
 
-function field(label, value = "", type = "input", options = []) {
+function field(label, value = "", type = "input", options = [], dataField = "") {
   if (type === "textarea") {
     return `
       <label>
@@ -1743,7 +1847,7 @@ function field(label, value = "", type = "input", options = []) {
   return `
     <label>
       <span>${escapeHtml(label)}</span>
-      <input value="${escapeHtml(value)}" />
+      <input value="${escapeHtml(value)}" ${dataField ? `data-field="${escapeHtml(dataField)}"` : ""} />
     </label>
   `;
 }
@@ -1889,7 +1993,7 @@ function aiSettingsPage() {
           </div>
         </div>
         <div class="form-grid compact">
-          ${field("Agent Name", "KOFON Product Expert")}
+          ${field("Agent Name", agentSettings.agent_name, "input", [], "agent-name")}
           ${avatarField("/agent-profilepic.jpeg")}
           ${languageToggleList()}
         </div>
@@ -1898,8 +2002,8 @@ function aiSettingsPage() {
         <h2>Response Controls</h2>
         <div class="control-list">
           ${controlLocked("Show answer sources", "Display document references below AI answers.")}
-          ${control("Require confidence threshold", true, "Route low-confidence answers to review.")}
-          ${control("Auto-create sales lead", true, "Create lead when purchase intent is high.")}
+          ${control("Require confidence threshold", agentSettings.require_confidence_threshold, "Route low-confidence answers to review.")}
+          ${control("Auto-create sales lead", agentSettings.auto_create_lead, "Create lead when purchase intent is high.")}
           ${controlLocked("Allow price estimate", "Exact price should be handled by sales.")}
         </div>
       </aside>
@@ -1907,29 +2011,41 @@ function aiSettingsPage() {
   `;
 }
 
-// Preconfigured languages the admin can switch on or off for the agent.
-// Mirrors the backend's SUPPORTED_LANGUAGES (app/i18n.py).
-const agentLanguages = [
-  { id: "English", on: true },
-  { id: "Chinese", on: true },
-  { id: "German", on: false },
-  { id: "French", on: false },
-  { id: "Russian", on: false },
-  { id: "Japanese", on: false },
-  { id: "Korean", on: false }
+// Languages the admin can switch on or off for the agent. `code` matches the
+// backend's SUPPORTED_LANGUAGES (app/i18n.py); the agent honors only enabled
+// codes and falls back to the default language for the rest.
+const AGENT_LANGUAGES = [
+  { code: "EN", label: "English" },
+  { code: "ZH", label: "Chinese" },
+  { code: "DE", label: "German" },
+  { code: "FR", label: "French" },
+  { code: "RU", label: "Russian" },
+  { code: "JA", label: "Japanese" },
+  { code: "KO", label: "Korean" }
 ];
 
+// Live agent settings, loaded from /admin/api/agent-settings. Defaults mirror
+// app/agent/agent_settings.py so the form renders sensibly before the fetch
+// resolves.
+let agentSettings = {
+  agent_name: "KOFON Product Expert",
+  enabled_languages: ["EN", "ZH", "DE", "FR", "RU", "JA", "KO"],
+  auto_create_lead: true,
+  require_confidence_threshold: true
+};
+
 function languageToggleList() {
+  const enabled = agentSettings.enabled_languages || [];
   return `
     <div class="full-field">
       <span>Languages</span>
       <div class="language-toggle-list">
-        ${agentLanguages
+        ${AGENT_LANGUAGES
           .map(
             (lang) => `
               <div class="language-toggle-item">
-                <strong>${escapeHtml(lang.id)}</strong>
-                ${switchControl("lang:" + lang.id, lang.on)}
+                <strong>${escapeHtml(lang.label)}</strong>
+                ${switchControl("lang:" + lang.code, enabled.includes(lang.code))}
               </div>
             `
           )
@@ -2397,7 +2513,6 @@ function operationLogsPage() {
 const PREVIEW_PAGES = new Set([
   "Manual Takeover",
   "FAQ Management",
-  "AI Agent Settings",
   "Customers & Leads",
   "Analytics",
   "Answer Review",
@@ -2413,6 +2528,7 @@ const NAV_PERMISSION = {
   "Knowledge Base": "content.read",
   "FAQ Management": "content.read",
   "Customers & Leads": "notifications.read",
+  "AI Agent Settings": "settings.write",
   "User Permissions": "users.manage",
   "Operation Logs": "users.manage"
 };
@@ -2855,6 +2971,11 @@ root.addEventListener("click", (event) => {
     return;
   }
 
+  if (action === "settings-save" && state.page === "AI Agent Settings") {
+    saveAgentSettings(actionButton);
+    return;
+  }
+
   const actionMessages = {
     "answer-correct": ["Answer marked correct.", "回答已标记为正确。"],
     "answer-incorrect": ["Answer sent to review queue.", "回答已送入审核队列。"],
@@ -2878,4 +2999,5 @@ root.addEventListener("click", (event) => {
 
 render();      // initial paint (login screen while we check the session)
 bootstrap();   // resolve identity, then load the active section's real data
+startConversationPolling();  // keep conversation lists live without a refresh
 

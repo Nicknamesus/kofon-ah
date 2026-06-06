@@ -57,6 +57,11 @@ async def create_backup() -> Path:
             (staging / "config.kofon.js").write_text(
                 widget_cfg.read_text(encoding="utf-8"), encoding="utf-8"
             )
+        agent_cfg = _BACKEND_ROOT / "agent_settings.json"
+        if agent_cfg.exists():
+            (staging / "agent_settings.json").write_text(
+                agent_cfg.read_text(encoding="utf-8"), encoding="utf-8"
+            )
 
         manifest = [f"Kofon backup — {stamp} UTC", "", "Row counts:"]
         manifest += [f"  {k}: {v}" for k, v in counts.items()]

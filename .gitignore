@@ -8,6 +8,9 @@ venv/
 # Env / secrets
 .env
 
+# Runtime-editable AI agent settings (written by the admin console)
+agent_settings.json
+
 # Editor
 .vscode/
 .idea/

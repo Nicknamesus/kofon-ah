@@ -6,6 +6,7 @@
   --navy-2: #0b2343;
   --navy-3: #102d52;
   --blue: #132178;
+  --blue-light: #1d8cff;
   --blue-2: #0a64d8;
   --cyan: #32c5ff;
   --steel: #617086;
@@ -470,7 +471,7 @@ img.brand-mark {
   height: 20px;
   padding: 0 6px;
   border-radius: 999px;
-  background: var(--blue);
+  background: var(--blue-light);
   color: #fff;
   font-size: 11px;
   font-weight: 800;
@@ -764,6 +765,54 @@ mark.page-find-hit.current {
   line-height: 1.15;
 }
 
+/* Title + optional inline badge (e.g. "Live" on User Conversations). */
+.page-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--green-bg);
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: live-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.7);
+  }
+}
+
+/* Respect reduced-motion preferences: keep the dot, drop the pulse. */
+@media (prefers-reduced-motion: reduce) {
+  .live-dot {
+    animation: none;
+  }
+}
+
 .page-header p:not(.eyebrow) {
   max-width: 780px;
   margin: 8px 0 0;
@@ -908,7 +957,7 @@ mark.page-find-hit.current {
 
 .line-chart circle {
   fill: #fff;
-  stroke: var(--blue);
+  stroke: var(--blue-light);
   stroke-width: 3;
 }
 
@@ -938,7 +987,7 @@ mark.page-find-hit.current {
   border-radius: 50%;
   background:
     radial-gradient(circle at center, #fff 0 56%, transparent 57%),
-    conic-gradient(var(--blue) var(--value), #e7edf5 0);
+    conic-gradient(var(--blue-light) var(--value), #e7edf5 0);
 }
 
 .donut span {

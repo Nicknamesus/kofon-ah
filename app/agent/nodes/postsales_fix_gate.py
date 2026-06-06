@@ -102,8 +102,13 @@ async def run(state: AgentState) -> dict:
 
     if verdict == "yes":
         # Low-confidence solution? Don't claim resolved — bump to human
-        # so an engineer can verify.
-        if confidence and confidence <= LOW_CONFIDENCE_FLOOR:
+        # so an engineer can verify. Gated by AI Agent Settings → "Require
+        # confidence threshold"; when the admin turns it off, even shaky
+        # fixes are taken at face value.
+        from app.agent.agent_settings import get_agent_settings
+
+        enforce_confidence = get_agent_settings()["require_confidence_threshold"]
+        if enforce_confidence and confidence and confidence <= LOW_CONFIDENCE_FLOOR:
             return {
                 "slots": {
                     "postsales": {

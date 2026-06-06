@@ -59,6 +59,21 @@ async def handle_sell(state: AgentState) -> dict[str, Any]:
     if conversation_id is None:
         return {}
 
+    # AI Agent Settings → "Auto-create sales lead". When the admin turns this
+    # off, the agent still closes the conversation as a 'sell' (for analytics)
+    # but creates no RFQ / CRM record / division email.
+    from app.agent.agent_settings import get_agent_settings
+
+    if not get_agent_settings()["auto_create_lead"]:
+        async with SessionLocal() as session:
+            await session.execute(
+                update(Conversation)
+                .where(Conversation.id == conversation_id)
+                .values(outcome="sell")
+            )
+            await session.commit()
+        return {}
+
     slots = state.get("slots") or {}
     family = _resolve_family(state)
     division = resolve_division(state.get("flow") or "guide", family)

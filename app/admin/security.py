@@ -35,6 +35,7 @@ PERMISSIONS_ALL = {
     "routing.write",       # edit routing.yaml (divisions/inboxes)
     "conversations.read",  # view conversation history
     "notifications.read",  # see + ack the sales/handoff feed
+    "settings.write",      # edit AI Agent Settings (name, languages, behavior)
     "export.run",          # export DB content back to seed YAML
     "backup.run",          # create/download backups
     "restart.run",         # restart the bot (deferred — see §6)
@@ -49,6 +50,7 @@ PERMISSIONS: dict[str, set[str]] = {
         "routing.write",
         "conversations.read",
         "notifications.read",
+        "settings.write",
         "export.run",
     },
     "sales": {

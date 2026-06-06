@@ -21,12 +21,14 @@ from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import func, select
 
-from app.admin import security
-from app.admin.deps import AdminContext, _client_ip, require_admin
+from app.admin import audit, security
+from app.admin.deps import AdminContext, _client_ip, require_admin, require_csrf
 from app.admin.security import PERMISSIONS, PERMISSIONS_ALL, WILDCARD
 from app.admin.templating import NAV
+from app.agent.agent_settings import get_agent_settings, update_agent_settings
 from app.config import get_settings
 from app.db import SessionLocal
+from app.i18n import DEFAULT_LANGUAGE, LANGUAGE_NAMES, SUPPORTED_LANGUAGES
 from app.models import (
     AdminAuditLog,
     AdminUser,
@@ -220,6 +222,11 @@ _STATUS_MAP = {
     "lead": "Lead created",
 }
 
+# Structured UI directives the agent emits to the chat widget (quick-reply
+# chips, etc.) that aren't part of the human-readable transcript. They'd
+# otherwise render as raw JSON in the admin conversation view, so we drop them.
+_HIDDEN_MESSAGE_KINDS = {"suggest"}
+
 
 def _convo_status(row: Conversation) -> str:
     if row.outcome:
@@ -333,6 +340,8 @@ async def conversation_detail(
     for m in msgs:
         if m.role == "system":
             continue
+        if isinstance(m.content, dict) and m.content.get("kind") in _HIDDEN_MESSAGE_KINDS:
+            continue
         is_ai = m.role in ("assistant", "bot", "ai")
         out_messages.append({
             "from": "ai" if is_ai else "user",
@@ -342,6 +351,61 @@ async def conversation_detail(
         })
     brief["messages"] = out_messages
     return brief
+
+
+# ---- AI agent settings ---------------------------------------------------
+# Read/write the runtime knobs the live agent consults (app.agent.agent_settings).
+# Editable fields are deliberately limited to what the agent actually honors.
+
+_EDITABLE_SETTINGS = (
+    "agent_name",
+    "enabled_languages",
+    "auto_create_lead",
+    "require_confidence_threshold",
+)
+
+
+@router.get("/agent-settings")
+async def agent_settings_get(ctx: AdminContext = Depends(require_admin)) -> dict[str, Any]:
+    _require(ctx, "settings.write")
+    return {
+        "settings": get_agent_settings(),
+        # The full language catalog so the SPA can render a toggle per language.
+        "languages": [
+            {"code": code, "name": LANGUAGE_NAMES[code]} for code in SUPPORTED_LANGUAGES
+        ],
+        "default_language": DEFAULT_LANGUAGE,
+    }
+
+
+@router.put("/agent-settings")
+async def agent_settings_put(
+    request: Request, ctx: AdminContext = Depends(require_csrf)
+) -> dict[str, Any]:
+    _require(ctx, "settings.write")
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        body = None
+    if not isinstance(body, dict):
+        return JSONResponse({"error": "Invalid body."}, status_code=400)  # type: ignore[return-value]
+
+    patch = {k: body[k] for k in _EDITABLE_SETTINGS if k in body}
+    updated = update_agent_settings(patch)
+
+    async with SessionLocal() as s:
+        await audit.record(
+            s,
+            user=ctx.user,
+            action="agent_settings.update",
+            entity_type="agent_settings",
+            entity_id="agent",
+            diff=updated,
+            ip=_client_ip(request),
+        )
+        await s.commit()
+
+    return {"settings": updated}
 
 
 # ---- products (catalog) --------------------------------------------------

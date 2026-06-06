@@ -35,7 +35,20 @@ def _norm(lang: str | None) -> str:
     if not lang:
         return DEFAULT_LANGUAGE
     code = lang.strip().upper()
-    return code if code in SUPPORTED_LANGUAGES else DEFAULT_LANGUAGE
+    if code not in SUPPORTED_LANGUAGES:
+        return DEFAULT_LANGUAGE
+    # Honor the admin's enabled-language set (AI Agent Settings). A pick that's
+    # been switched off falls back to the default language. Lazy import keeps
+    # this module free of an agent_settings → i18n import cycle, and any lookup
+    # failure degrades gracefully to "all supported languages on".
+    try:
+        from app.agent.agent_settings import get_agent_settings
+
+        if code not in get_agent_settings()["enabled_languages"]:
+            return DEFAULT_LANGUAGE
+    except Exception:  # noqa: BLE001
+        pass
+    return code
 
 
 def language_instruction(lang: str | None) -> str:

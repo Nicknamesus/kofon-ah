@@ -28,8 +28,26 @@ PROMPT_ARMOR = (
 def system_message(content: str, lang: str | None = None) -> SystemMessage:
     """Build a ``SystemMessage`` with language instruction and injection armor."""
     return SystemMessage(
-        content=content + language_instruction(lang) + PROMPT_ARMOR
+        content=content + _identity_suffix() + language_instruction(lang) + PROMPT_ARMOR
     )
+
+
+def _identity_suffix() -> str:
+    """The agent's display name from AI Agent Settings, appended so the model
+    introduces itself consistently. Lazy import + soft-fail: a settings hiccup
+    must never break a turn."""
+    try:
+        from app.agent.agent_settings import get_agent_settings
+
+        name = (get_agent_settings().get("agent_name") or "").strip()
+        if name:
+            return (
+                f"\n\nYour name is {name}. If the user asks who you are, "
+                f"introduce yourself by that name."
+            )
+    except Exception:  # noqa: BLE001
+        pass
+    return ""
 
 
 def get_chat_llm(
