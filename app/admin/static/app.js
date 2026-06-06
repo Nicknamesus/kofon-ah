@@ -1005,7 +1005,151 @@ const zhText = {
   "Quotation": "报价中",
   "Warm": "温和",
   "Risk": "风险",
-  "Hot": "高热度"
+  "Hot": "高热度",
+  // ---- example companies, regions, and people (demo data) ----
+  "Wuhan Smart Logistics Co.": "武汉智能物流有限公司",
+  "Suzhou Robotics Lab": "苏州机器人实验室",
+  "Apex Automation": "艾派斯自动化",
+  "Hefei Laser Equipment": "合肥激光设备",
+  "NorthStar Robotics": "北极星机器人",
+  "EuroMotion S.r.l.": "欧动传动有限公司",
+  "Hubei": "湖北",
+  "Jiangsu": "江苏",
+  "Anhui": "安徽",
+  "Export": "海外",
+  "Liu Wei": "刘伟",
+  "Chen Rong": "陈蓉",
+  "Zhang Min": "张敏",
+  "Maya Patel": "玛雅·帕特尔",
+  "Robert Miller": "罗伯特·米勒",
+  "Elena Rossi": "埃琳娜·罗西",
+  "Iris Wang": "王艾莉",
+  "Leo Chen": "陈利奥",
+  "Nina Xu": "徐丽娜",
+  "Grace Li": "李恩慈",
+  "Unassigned": "未分配",
+  // ---- conversation summaries ----
+  "AGV drive wheel selection for 1.5T payload and 24-hour operation.": "针对 1.5T 负载、24 小时运行的 AGV 驱动轮选型。",
+  "Robot joint reducer comparison between harmonic and planetary reducer.": "机器人关节减速机：谐波与行星减速机对比。",
+  "Asked for servo electric cylinder stroke and thrust matching for packaging line.": "咨询包装线伺服电动缸的行程与推力匹配。",
+  "Asked about backlash under extreme temperature; knowledge base did not contain enough detail.": "咨询极端温度下的背隙，知识库缺乏足够细节。",
+  // ---- conversation messages ----
+  "We are building an AGV platform with 1.5T load. Which KOFON steering drive module should we evaluate?": "我们正在搭建 1.5T 负载的 AGV 平台。应评估科峰的哪款舵轮驱动模块？",
+  "For 1.5T payload, I suggest starting from AGV steering and drive wheel products, then checking wheel diameter, rated torque, reduction ratio, installation space, and duty cycle. If the route includes slopes or high acceleration, manual engineering verification is recommended.": "对于 1.5T 负载，建议从 AGV 舵轮与驱动轮产品入手，再核对轮径、额定扭矩、减速比、安装空间和工作制。如果路线包含坡道或高加速度，建议进行人工工程验证。",
+  "The vehicle needs 24-hour operation and frequent turning in narrow aisles.": "车辆需要 24 小时运行，并在狭窄通道内频繁转向。",
+  "In that case, prioritize thermal margin, bearing load, steering precision, and reducer backlash. I can collect payload, max speed, wheel diameter, slope, and battery voltage for a sales engineer.": "这种情况下，应优先考虑热裕量、轴承负载、转向精度和减速机背隙。我可以收集负载、最高速度、轮径、坡度和电池电压，转交销售工程师。",
+  "What is the difference between harmonic reducer and precision planetary reducer for a robot joint?": "用于机器人关节时，谐波减速机和精密行星减速机有什么区别？",
+  "Harmonic reducers are often selected for compact robot joints requiring high reduction ratio and low backlash. Precision planetary reducers are stronger for higher radial load, broad torque ranges, and robust industrial transmission scenarios.": "谐波减速机常用于需要高减速比和低背隙的紧凑型机器人关节。精密行星减速机在更高径向负载、宽扭矩范围和重载工业传动场景中更具优势。",
+  "Can you send model suggestions?": "能给出型号建议吗？",
+  "Please provide joint torque, target reduction ratio, motor flange, installation space, and duty cycle. With those parameters, I can recommend a KOFON series and flag items for engineer confirmation.": "请提供关节扭矩、目标减速比、电机法兰、安装空间和工作制。有了这些参数，我可以推荐科峰的产品系列，并标注需工程师确认的事项。",
+  "Need an electric cylinder for a packaging push station, 600 mm stroke, 3 kN thrust.": "需要用于包装推料工位的电动缸，行程 600 mm，推力 3 kN。",
+  "KOFON servo electric cylinder options can be evaluated by stroke, thrust, speed, mounting style, repeatability, motor power, and duty cycle. I recommend collecting speed and installation constraints before model selection.": "科峰伺服电动缸可按行程、推力、速度、安装方式、重复精度、电机功率和工作制进行评估。建议在选型前先收集速度和安装约束。",
+  "Budget approval this month. Please have sales contact us.": "本月预算已批，请安排销售与我们联系。",
+  "I have marked this as a high-intent lead and will route it to the sales team with your application details.": "我已将其标记为高意向线索，并会连同您的应用细节转交销售团队。",
+  "Can KH series hold backlash below 3 arcmin at low temperature?": "KH 系列在低温下能将背隙保持在 3 arcmin 以下吗？",
+  "KH series is positioned as a high-precision planetary reducer. Backlash performance should be checked against the exact specification table and operating temperature. The current knowledge base does not include a verified low-temperature curve.": "KH 系列定位为高精度行星减速机。背隙性能应对照具体规格表和工作温度核实。当前知识库尚未包含经过验证的低温曲线。",
+  "So is it yes or no?": "那到底行不行？",
+  "I cannot confirm without the verified model specification. I recommend manual engineer review.": "在没有经过验证的型号规格前，我无法确认。建议进行人工工程师复核。",
+  // ---- product fields (description / parameters / scenarios / advantages) ----
+  "High rigidity reducer for servo transmission and general automation.": "适用于伺服传动和通用自动化的高刚性减速机。",
+  "Ratio 3-100, low backlash, compact coaxial structure": "速比 3-100，低背隙，紧凑同轴结构",
+  "Robotics, laser equipment, packaging machines": "机器人、激光设备、包装机械",
+  "High precision, stable torque output, broad motor compatibility": "高精度，扭矩输出稳定，电机兼容性广",
+  "Compact harmonic reducer for robot joints and precision positioning.": "适用于机器人关节和精密定位的紧凑型谐波减速机。",
+  "High reduction ratio, compact cup structure, low backlash": "高减速比，紧凑杯形结构，低背隙",
+  "Collaborative robots, service robots, semiconductor equipment": "协作机器人、服务机器人、半导体设备",
+  "Lightweight, compact, smooth transmission": "轻量化，结构紧凑，传动平稳",
+  "Integrated steering and drive solution for intelligent logistics vehicles.": "面向智能物流车辆的舵轮驱动一体化解决方案。",
+  "Custom load range, wheel diameter, voltage, encoder options": "可定制负载范围、轮径、电压和编码器选项",
+  "Smart warehouse, material handling, heavy-duty AGV": "智能仓储、物料搬运、重载 AGV",
+  "Integrated design, reliable continuous operation, easy installation": "集成化设计，连续运行可靠，安装便捷",
+  "High-load linear transmission component for electric actuation.": "用于电动执行的高负载直线传动部件。",
+  "High load capacity, long service life, precision linear motion": "承载能力高，使用寿命长，直线运动精密",
+  "Servo presses, aerospace fixtures, heavy electric cylinders": "伺服压机、航空工装、重载电动缸",
+  "High thrust density, stable motion, strong durability": "推力密度高，运动稳定，耐久性强",
+  "Servo-driven linear actuator for high repeatability automation stations.": "适用于高重复精度自动化工位的伺服直线执行器。",
+  "Stroke 100-800 mm, configurable thrust and speed": "行程 100-800 mm，推力与速度可配置",
+  "Packaging, assembly, pressing, testing equipment": "包装、装配、压装、测试设备",
+  "Clean operation, programmable position, easy servo integration": "运行洁净，位置可编程，伺服集成简便",
+  "Integrated servo, reducer, and drive module for compact motion systems.": "集伺服、减速机和驱动于一体的紧凑型运动模组。",
+  "Integrated drive, compact axis module, configurable feedback": "集成驱动，紧凑轴模组，反馈可配置",
+  "Robot arms, inspection devices, multi-axis automation": "机械臂、检测设备、多轴自动化",
+  "Reduced wiring, high integration, simplified commissioning": "减少布线，高度集成，调试简化",
+  "Planetary Reducer": "行星减速机",
+  "KH Series Reducer": "KH 系列减速机",
+  // ---- knowledge base documents ----
+  "F Series Planetary Reducer Product Manual.pdf": "F 系列行星减速机产品手册.pdf",
+  "AGV Drive Wheel Selection Parameters.xlsx": "AGV 驱动轮选型参数.xlsx",
+  "KH Series Low Backlash Specification.docx": "KH 系列低背隙规格书.docx",
+  "After-sales Policy 2026.pdf": "2026 售后政策.pdf",
+  "Harmonic Reducer Installation Guide.pdf": "谐波减速机安装指南.pdf",
+  "Product Manual": "产品手册",
+  "Parameter Sheet": "参数表",
+  "Technical Spec": "技术规格",
+  "Service Policy": "服务政策",
+  "Installation Guide": "安装指南",
+  "Product Team": "产品团队",
+  "Application Engineering": "应用工程",
+  "R&D": "研发",
+  "Service Center": "服务中心",
+  "Disabled": "已停用",
+  // ---- FAQ ----
+  "How to select reduction ratio for a servo motor?": "如何为伺服电机选择减速比？",
+  "What parameters are required for AGV drive wheel selection?": "AGV 驱动轮选型需要哪些参数？",
+  "Can KOFON provide non-standard reducer customization?": "科峰能否提供非标减速机定制？",
+  "What is the warranty policy for servo electric cylinders?": "伺服电动缸的质保政策是怎样的？",
+  "How to compare harmonic reducer and planetary reducer?": "如何比较谐波减速机与行星减速机？",
+  "Selection": "选型",
+  "Customization": "定制",
+  "After-sales": "售后",
+  "Product Knowledge": "产品知识",
+  // ---- analytics chart labels ----
+  "Planetary": "行星",
+  "Harmonic": "谐波",
+  "Cylinder": "电动缸",
+  "Screw": "丝杠",
+  "Model selection": "型号选型",
+  "Technical parameters": "技术参数",
+  "Price inquiry": "价格咨询",
+  "Delivery cycle": "交货周期",
+  // ---- answer review ----
+  "Can KH series keep backlash below 3 arcmin under -20 C?": "KH 系列能在 -20°C 下将背隙保持在 3 arcmin 以下吗？",
+  "KH series is high precision and should meet low backlash needs.": "KH 系列为高精度产品，应能满足低背隙需求。",
+  "Do not confirm low-temperature backlash without a verified model specification. Ask for exact model, reduction ratio, load, ambient temperature, and duty cycle, then route to engineering review.": "在没有经过验证的型号规格前，不要确认低温背隙。应索取具体型号、减速比、负载、环境温度和工作制，再转交工程复核。",
+  "Missing low-temperature spec": "缺少低温规格",
+  "Can the AGV drive wheel operate in wet warehouse environments?": "AGV 驱动轮能在潮湿仓库环境中运行吗？",
+  "Yes, KOFON AGV drive wheels can operate in warehouse environments.": "可以，科峰 AGV 驱动轮能够在仓库环境中运行。",
+  "Clarify environment level and request IP rating, floor condition, speed, load, and duty cycle. Do not promise wet-environment suitability without the matched product protection grade.": "明确环境等级并索取防护等级（IP）、地面状况、速度、负载和工作制。在没有匹配的产品防护等级前，不要承诺适用于潮湿环境。",
+  "AGV selection sheet": "AGV 选型表",
+  "What is the exact price of KBG-HF harmonic reducer?": "KBG-HF 谐波减速机的准确价格是多少？",
+  "The price is usually competitive and depends on configuration.": "价格通常具有竞争力，且取决于配置。",
+  "Explain that exact pricing depends on model, ratio, quantity, delivery terms, and region. Offer to create a lead for sales quotation.": "说明准确价格取决于型号、速比、数量、交货条款和地区。可提议创建线索以便销售报价。",
+  "Sales policy": "销售政策",
+  // ---- operation logs ----
+  "AI Agent": "AI 智能体",
+  "Admin / Iris": "管理员 / 艾莉",
+  "QA / Nina": "质检 / 妮娜",
+  "System": "系统",
+  "Created sales lead": "创建销售线索",
+  "Enabled document": "启用文档",
+  "Marked answer incorrect": "标记回答错误",
+  "Knowledge indexing": "知识索引构建",
+  "F Series Product Manual": "F 系列产品手册",
+  "After-sales Policy 2026": "2026 售后政策",
+  "Pending review": "待审核",
+  // ---- roles + descriptions ----
+  "superadmin": "超级管理员",
+  "editor": "编辑",
+  "sales": "销售",
+  "viewer": "只读",
+  "All modules, settings, and permission management.": "所有模块、设置和权限管理。",
+  "Products, knowledge base, routing, conversations, exports.": "产品、知识库、路由、对话和导出。",
+  "Conversations, leads, and notifications.": "对话、线索和通知。",
+  "Read-only conversations and notifications.": "只读对话和通知。",
+  "Control administrator accounts, roles, and access.": "管理管理员账号、角色和访问权限。",
+  // ---- manual takeover ----
+  "Hello, this is KOFON support. I will collect the operating data and route it to our AGV application engineer.": "您好，这里是科峰客服。我会收集运行数据并转交给我们的 AGV 应用工程师。",
+  "Ask for AGV payload, speed, slope, route condition, wheel diameter, battery voltage, expected duty cycle. Do not promise exact model before engineer check.": "询问 AGV 负载、速度、坡度、路线状况、轮径、电池电压和预期工作制。在工程师确认前不要承诺具体型号。"
 };
 
 function msg(en, zh) {
@@ -1042,9 +1186,36 @@ function translateLooseText(text) {
   translated = text.replace(/^(\d+) products across reducer, AGV, screw, cylinder, and mechatronics categories\.$/u, "$1 个产品覆盖减速机、AGV、丝杠、电动缸和机电一体化品类。");
   if (translated !== text) return translated;
 
+  // Relative timestamps used in conversation / lead lists.
+  translated = text.replace(/^Today (\d{1,2}:\d{2})$/u, "今天 $1");
+  if (translated !== text) return translated;
+  translated = text.replace(/^Yesterday (\d{1,2}:\d{2})$/u, "昨天 $1");
+  if (translated !== text) return translated;
+  // "May 31 17:12" → "5月31日 17:12"
+  translated = text.replace(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{1,2}) (\d{1,2}:\d{2})$/u, (_, mon, day, time) => `${MONTH_ZH[mon]}${day}日 ${time}`);
+  if (translated !== text) return translated;
+
+  // Counts / units that carry a number we keep verbatim.
+  translated = text.replace(/^(\d+) mentions$/u, "$1 次提及");
+  if (translated !== text) return translated;
+  translated = text.replace(/^Confidence (\d+)%$/u, "置信度 $1%");
+  if (translated !== text) return translated;
+  translated = text.replace(/^(\d+) minutes$/u, "$1 分钟");
+  if (translated !== text) return translated;
+  translated = text.replace(/^(\d+) months$/u, "$1 个月");
+  if (translated !== text) return translated;
+  translated = text.replace(/^(\d+) hours$/u, "$1 小时");
+  if (translated !== text) return translated;
+
   translated = text.replace(" · wait ", " · 等待 ");
   return translated;
 }
+
+// Month abbreviations → Chinese, for the relative-timestamp translator above.
+const MONTH_ZH = {
+  Jan: "1月", Feb: "2月", Mar: "3月", Apr: "4月", May: "5月", Jun: "6月",
+  Jul: "7月", Aug: "8月", Sep: "9月", Oct: "10月", Nov: "11月", Dec: "12月"
+};
 
 function translateTextValue(value) {
   const leading = value.match(/^\s*/u)?.[0] || "";
@@ -1117,6 +1288,13 @@ function pill(text, extra = "") {
 // own (e.g. User Conversations polling for new records).
 function liveBadge() {
   return `<span class="live-badge"><span class="live-dot"></span>${msg("Live", "实时")}</span>`;
+}
+
+// The KOFON logo (blue-circle "K") — used everywhere the AI agent identifies
+// itself. Always rendered as a circle with a thin white outline (see the
+// `.kofon-logo` rule, which overrides the squared-industrial theme).
+function kofonLogo(extraClass = "") {
+  return `<img class="kofon-logo ${extraClass}" src="/agent-profilepic.jpeg" alt="KOFON AI Agent" />`;
 }
 
 function progressBar(value) {
@@ -1629,7 +1807,7 @@ function userConversationsPage() {
                   .map(
                     (message) => `
                 <div class="message ${message.from}">
-                  <div class="message-avatar">${message.from === "ai" ? "AI" : "U"}</div>
+                  ${message.from === "ai" ? kofonLogo("message-avatar") : `<div class="message-avatar">U</div>`}
                   <div class="message-bubble">
                     <p>${escapeHtml(message.text)}</p>
                     ${
@@ -1986,7 +2164,7 @@ function aiSettingsPage() {
     <section class="settings-layout">
       <article class="panel">
         <div class="settings-hero">
-          <div class="agent-avatar">AI</div>
+          ${kofonLogo("agent-avatar")}
           <div>
             <h2>KOFON Product Expert</h2>
             <p>Industrial transmission AI assistant for customer service, product consultation, and lead qualification.</p>
@@ -2289,7 +2467,7 @@ function manualTakeoverPage() {
             .map(
               (message) => `
                 <div class="message ${message.from}">
-                  <div class="message-avatar">${message.from === "ai" ? "AI" : "U"}</div>
+                  ${message.from === "ai" ? kofonLogo("message-avatar") : `<div class="message-avatar">U</div>`}
                   <div class="message-bubble"><p>${escapeHtml(message.text)}</p></div>
                 </div>
               `

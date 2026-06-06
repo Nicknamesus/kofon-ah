@@ -2046,6 +2046,21 @@ textarea,
   border-radius: 50%;
 }
 
+/* The KOFON logo (the blue-circle "K") is ALWAYS a circle with a thin white
+   outline — never a rounded square. This sits after the squared-industrial
+   theme so it wins, and the explicit `.message.ai .message-avatar` selector
+   out-specifies the squared `.message-avatar` rule above. */
+img.brand-mark,
+.agent-avatar.kofon-logo,
+.message.ai .message-avatar.kofon-logo,
+.kofon-logo {
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #fff;
+  /* faint outer ring so the white outline still reads on white panels */
+  box-shadow: 0 0 0 1px var(--line);
+}
+
 .metric-card::after {
   border-radius: 3px;
   transform: rotate(12deg);

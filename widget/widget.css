@@ -290,7 +290,8 @@ img.aiagent-avatar {
   object-fit: cover;
   flex-shrink: 0;
   position: relative;
-  border: 3px solid #fff;
+  /* Thin white outline — the KOFON logo is always a blue circle, never square. */
+  border: 2px solid #fff;
   box-shadow: 0 0 0 1px rgba(255,255,255,0.3);
 }
 
@@ -708,6 +709,9 @@ img.aiagent-msg-avatar {
   object-fit: cover;
   flex-shrink: 0;
   margin-top: 2px;
+  /* Thin white outline so the blue-circle logo reads on the bot bubble. */
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(19, 33, 120, 0.12);
 }
 
 .aiagent-msg-bubble {
