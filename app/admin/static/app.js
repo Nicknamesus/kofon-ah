@@ -1149,7 +1149,27 @@ const zhText = {
   "Control administrator accounts, roles, and access.": "管理管理员账号、角色和访问权限。",
   // ---- manual takeover ----
   "Hello, this is KOFON support. I will collect the operating data and route it to our AGV application engineer.": "您好，这里是科峰客服。我会收集运行数据并转交给我们的 AGV 应用工程师。",
-  "Ask for AGV payload, speed, slope, route condition, wheel diameter, battery voltage, expected duty cycle. Do not promise exact model before engineer check.": "询问 AGV 负载、速度、坡度、路线状况、轮径、电池电压和预期工作制。在工程师确认前不要承诺具体型号。"
+  "Ask for AGV payload, speed, slope, route condition, wheel diameter, battery voltage, expected duty cycle. Do not promise exact model before engineer check.": "询问 AGV 负载、速度、坡度、路线状况、轮径、电池电压和预期工作制。在工程师确认前不要承诺具体型号。",
+  // ---- live dashboard metric sub-labels (from /admin/api/dashboard) ----
+  "Sessions started today": "今日发起的会话",
+  "Distinct identified users": "去重识别的用户",
+  "Ended without an outcome": "无结果结束",
+  "Detected from conversations today": "今日从对话中识别",
+  // ---- product family groups (mirror app/content_i18n.py _FAMILY_GROUPS) ----
+  "Precision Planetary Gearbox": "精密行星减速机",
+  "Servo Motor Solution": "伺服电机方案",
+  "Strain Wave / Harmonic Gear": "谐波减速器",
+  "Spiral Bevel Gearbox": "螺旋锥齿轮减速机",
+  "RV / Robot Reducer": "RV / 机器人减速器",
+  "AGV / AMR Drive Solution": "AGV / AMR 驱动方案",
+  // ---- knowledge base solutions (from /admin/api/content/kb) ----
+  "Solution": "解决方案",
+  "Backlash exceeds spec": "背隙超出规格",
+  "Input shaft oil weep": "输入轴渗油",
+  "Housing temperature alarm under continuous duty": "连续工况下壳体温度报警",
+  "Re-preload the output stage per SOP-CP-001.": "按 SOP-CP-001 对输出级重新预紧。",
+  "Replace the input-side lip seal (kit RKT-CP-IN).": "更换输入侧唇形密封件（套件 RKT-CP-IN）。",
+  "Verify duty cycle and ambient first; lubricant change is rarely the root cause. Escalate to engineering if duty is within spec.": "请先核实工作制与环境温度；更换润滑油很少是根本原因。若工作制在规格内，请升级至工程处理。"
 };
 
 function msg(en, zh) {
@@ -1199,6 +1219,9 @@ function translateLooseText(text) {
   translated = text.replace(/^(\d+) mentions$/u, "$1 次提及");
   if (translated !== text) return translated;
   translated = text.replace(/^Confidence (\d+)%$/u, "置信度 $1%");
+  if (translated !== text) return translated;
+  // KB "owner" column shows the solution's confidence score (no percent sign).
+  translated = text.replace(/^Confidence (\d+)$/u, "置信度 $1");
   if (translated !== text) return translated;
   translated = text.replace(/^(\d+) minutes$/u, "$1 分钟");
   if (translated !== text) return translated;
