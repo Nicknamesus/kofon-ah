@@ -107,6 +107,23 @@ async def start_session() -> SessionStartResponse:
     return SessionStartResponse(session_uuid=uuid4())
 
 
+@router.get("/agent-config")
+async def agent_config() -> dict[str, Any]:
+    """Public widget config derived from the admin "AI Agent Settings" page:
+    the displayed agent name and which languages the header switcher offers.
+
+    Only presentation-facing fields are exposed — the behavior flags
+    (auto-create lead, confidence threshold) are deliberately omitted.
+    """
+    from app.agent.agent_settings import get_agent_settings
+
+    settings = get_agent_settings()
+    return {
+        "agent_name": settings["agent_name"],
+        "enabled_languages": settings["enabled_languages"],
+    }
+
+
 @router.post("/messages")
 async def post_message(payload: MessageRequest) -> StreamingResponse:
     if not payload.text and not payload.gate_choice and not payload.picked_problem_id and not payload.custom_modules:

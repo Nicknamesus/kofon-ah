@@ -170,6 +170,46 @@
       this.handlers = this.cfg.on || {};
     }
 
+    /* ----- live config from the admin "AI Agent Settings" page ----- */
+    async _loadRemoteConfig() {
+      try {
+        const base = (this.cfg.apiUrl || "").replace(/\/+$/, "");
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 1500);
+        const res = await fetch(base + "/api/agent-config", {
+          credentials: "omit",
+          signal: ctrl.signal,
+        });
+        clearTimeout(timer);
+        if (res.ok) this._applyRemoteConfig(await res.json());
+      } catch (_) {
+        /* offline / embedded / slow backend — keep the static config */
+      }
+    }
+
+    _applyRemoteConfig(data) {
+      if (!data || typeof data !== "object") return;
+      // Displayed agent name (header, launcher + panel aria-labels, avatar alt).
+      if (typeof data.agent_name === "string" && data.agent_name.trim()) {
+        this.cfg.agentName = data.agent_name.trim();
+      }
+      // Restrict the header switcher to the admin-enabled languages, preserving
+      // the order/labels/flags from config.kofon.js.
+      if (Array.isArray(data.enabled_languages) && data.enabled_languages.length) {
+        const enabled = new Set(data.enabled_languages.map((c) => String(c).toUpperCase()));
+        const filtered = (this.cfg.languages || []).filter((l) =>
+          enabled.has(String(l.code).toUpperCase())
+        );
+        if (filtered.length) {
+          this.cfg.languages = filtered;
+          // Keep the active language valid if the current one was switched off.
+          if (!filtered.some((l) => l.code === this.state.language)) {
+            this.state.language = filtered[0].code;
+          }
+        }
+      }
+    }
+
     _avatarHTML(cls) {
       if (this.cfg.agentAvatar) {
         return `<img class="${cls}" src="${this.cfg.agentAvatar}" alt="${this.cfg.agentName}">`;
@@ -1835,7 +1875,15 @@
 
   /* ---------- Public API ---------- */
   global.AIAgent = {
-    mount(config) { return new AIAgent(config).mount(); },
+    async mount(config) {
+      const instance = new AIAgent(config);
+      // Pull live overrides from the admin "AI Agent Settings" page (displayed
+      // name + which languages the switcher offers) before the first paint, so
+      // there's no flash. Bounded + soft-fail: if the endpoint is slow or the
+      // widget is embedded off-origin, we just mount with the static config.
+      await instance._loadRemoteConfig();
+      return instance.mount();
+    },
     I18N,
   };
 })(window);
