@@ -419,6 +419,15 @@ function switchIsOn(key, fallbackOn) {
   return switchStates.has(key) ? switchStates.get(key) : !!fallbackOn;
 }
 
+// Per-chart "bar" vs "pie" preference, keyed by a stable chart id. Like
+// switchStates, it lives in this module-level map so a re-render keeps the view
+// the user picked. Charts default to "bar" until toggled.
+const chartViews = new Map();
+
+function chartView(id) {
+  return chartViews.has(id) ? chartViews.get(id) : "bar";
+}
+
 function switchControl(key, fallbackOn) {
   const on = switchIsOn(key, fallbackOn);
   return `<button type="button" class="toggle ${on ? "on" : ""}" role="switch" aria-checked="${on}" data-switch="${escapeHtml(key)}"></button>`;
@@ -1096,8 +1105,8 @@ function lineChart(values, label = "Conversation trend", opts = {}) {
     <svg class="line-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(label)}">
       <defs>
         <linearGradient id="lineFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#1d8cff" stop-opacity="0.28" />
-          <stop offset="100%" stop-color="#1d8cff" stop-opacity="0" />
+          <stop offset="0%" stop-color="#132178" stop-opacity="0.28" />
+          <stop offset="100%" stop-color="#132178" stop-opacity="0" />
         </linearGradient>
       </defs>
       <g class="grid-lines">${gridY}</g>
@@ -1105,7 +1114,7 @@ function lineChart(values, label = "Conversation trend", opts = {}) {
       ${yCaption}
       ${xCaption}
       <polyline points="${points} ${xAt(values.length - 1)},${padT + plotH} ${padL},${padT + plotH}" fill="url(#lineFill)" stroke="none"></polyline>
-      <polyline points="${points}" fill="none" stroke="#1d8cff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+      <polyline points="${points}" fill="none" stroke="#132178" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
       ${values
         .map((value, index) => `<circle cx="${xAt(index)}" cy="${yAt(value)}" r="4"><title>${escapeHtml(String(value))}</title></circle>`)
         .join("")}
@@ -1136,6 +1145,75 @@ function barList(items, maxValue = Math.max(...items.map((item) => item.value ||
   `;
 }
 
+// Palette for pie/donut slices — distinct, readable hues that share the deck's
+// blue/teal family so the charts still feel on-brand.
+const PIE_COLORS = ["#132178", "#16b8a6", "#7c5cff", "#f5a623", "#ef5da8", "#0a64d8", "#32c5ff", "#9bb2cf"];
+
+// Donut/pie counterpart to barList(). Each item is one coloured slice sized by
+// its share of `opts.total` (defaults to the sum of values). If the values fall
+// short of the total, the gap is drawn in the empty-track grey so the circle is
+// honest about uncounted volume — the same convention as the bar tracks.
+// opts: { total, centerLabel } — items may carry an explicit `color`.
+function pieChart(items, opts = {}) {
+  const data = items.map((item, index) => {
+    const value = item.value != null ? item.value : item.rate;
+    return {
+      label: item.label || item.name,
+      value,
+      count: item.count != null ? item.count : value,
+      color: item.color || PIE_COLORS[index % PIE_COLORS.length]
+    };
+  });
+  const total = opts.total != null ? opts.total : data.reduce((sum, d) => sum + d.value, 0) || 1;
+
+  let cursor = 0;
+  const stops = data.map((d) => {
+    const start = (cursor / total) * 360;
+    cursor += d.value;
+    const end = (cursor / total) * 360;
+    return `${d.color} ${start}deg ${end}deg`;
+  });
+  if (cursor < total) {
+    stops.push(`#e7edf5 ${(cursor / total) * 360}deg 360deg`);
+  }
+
+  const center = opts.centerLabel ? `<span>${escapeHtml(opts.centerLabel)}</span>` : "";
+  const legend = data
+    .map(
+      (d) => `
+        <li>
+          <span class="legend-label"><span class="legend-dot" style="background:${d.color}"></span><strong>${escapeHtml(d.label)}</strong></span>
+          <span>${escapeHtml(String(d.count))}</span>
+        </li>`
+    )
+    .join("");
+
+  return `
+    <div class="donut-wrap">
+      <div class="donut" style="background:radial-gradient(circle at center,#fff 0 56%,transparent 57%),conic-gradient(${stops.join(", ")})">${center}</div>
+      <ul class="compact-list legend-list">${legend}</ul>
+    </div>
+  `;
+}
+
+// Bar/Pie segmented switch for a chart. The id ties the buttons to chartViews so
+// the click handler (data-action="set-chart-view") can flip and persist it.
+function chartToggle(id) {
+  const view = chartView(id);
+  return `
+    <div class="segmented chart-toggle">
+      <button class="${view === "bar" ? "active" : ""}" data-action="set-chart-view" data-chart="${id}" data-view="bar" type="button">${msg("Bar", "柱状")}</button>
+      <button class="${view === "pie" ? "active" : ""}" data-action="set-chart-view" data-chart="${id}" data-view="pie" type="button">${msg("Pie", "饼图")}</button>
+    </div>
+  `;
+}
+
+// Renders `items` as either a bar list or a pie, per the user's saved choice for
+// this chart id. opts.total is shared by both views (bar track max / pie whole).
+function toggleableChart(id, items, opts = {}) {
+  return chartView(id) === "pie" ? pieChart(items, opts) : barList(items, opts.total);
+}
+
 // Demand signals: the grey track is the TOTAL request volume, and each blue
 // segment is sized so all categories (including "Others") sum to that total.
 function demandSignalsChart() {
@@ -1146,7 +1224,7 @@ function demandSignalsChart() {
   const rows = top.concat([
     { label: "Others", model: msg("All uncategorized requests", "所有未归类请求"), value: others, count: others }
   ]);
-  return barList(rows, total);
+  return toggleableChart("demand-signals", rows, { total });
 }
 
 function loginPage() {
@@ -1314,14 +1392,18 @@ function dashboardPage() {
             <p>The last 30 days</p>
           </div>
         </div>
-        <div class="donut-wrap">
-          <div class="donut" style="--value:334deg"><span>92.8%</span></div>
-          <ul class="compact-list">
-            <li><strong>Correct answers</strong><span>1,191</span></li>
-            <li><strong>Manual transfer</strong><span>72</span></li>
-            <li><strong>Review queue</strong><span>21</span></li>
-          </ul>
-        </div>
+        ${pieChart(
+          [
+            // Correct answers and Manual transfer are both counted as resolved
+            // for now, so both get a "success" green — a slightly lighter shade
+            // for transfers keeps them distinguishable. Review queue stays
+            // neutral grey as the still-unresolved remainder.
+            { label: "Correct answers", value: 1191, count: "1,191", color: "#12805c" },
+            { label: "Manual transfer", value: 72, count: "72", color: "#4cc4a3" },
+            { label: "Review queue", value: 21, count: "21", color: "#9bb2cf" }
+          ],
+          { centerLabel: "92.8%" }
+        )}
       </article>
       <article class="panel">
         <div class="panel-header">
@@ -1329,6 +1411,7 @@ function dashboardPage() {
             <h2>Hot Product Consultation</h2>
             <p>Demand signals from user conversations</p>
           </div>
+          ${chartToggle("demand-signals")}
         </div>
         ${demandSignalsChart()}
       </article>
@@ -1988,8 +2071,9 @@ function analyticsPage() {
             <h2>Product Consultation Ranking</h2>
             <p>Which KOFON lines are driving demand</p>
           </div>
+          ${chartToggle("product-consults")}
         </div>
-        ${barList(analytics.productConsults, analytics.productConsults.reduce((sum, item) => sum + item.value, 0))}
+        ${toggleableChart("product-consults", analytics.productConsults, { total: analytics.productConsults.reduce((sum, item) => sum + item.value, 0) })}
       </article>
       <article class="panel">
         <div class="panel-header">
@@ -1997,8 +2081,9 @@ function analyticsPage() {
             <h2>High Frequency Questions</h2>
             <p>Used for FAQ and knowledge base improvement</p>
           </div>
+          ${chartToggle("question-frequency")}
         </div>
-        ${barList(analytics.questionFrequency, analytics.questionFrequency.reduce((sum, item) => sum + item.value, 0))}
+        ${toggleableChart("question-frequency", analytics.questionFrequency, { total: analytics.questionFrequency.reduce((sum, item) => sum + item.value, 0) })}
       </article>
     </section>
   `;
@@ -2662,6 +2747,15 @@ root.addEventListener("click", (event) => {
       Object.assign(state, { user: null, permissions: [], csrf: null });
       setState({ authenticated: false, page: "Dashboard" });
     });
+    return;
+  }
+  if (action === "set-chart-view") {
+    const id = actionButton.dataset.chart;
+    const view = actionButton.dataset.view;
+    if (id && view && chartView(id) !== view) {
+      chartViews.set(id, view);
+      render();
+    }
     return;
   }
   if (action === "toggle-sidebar") {

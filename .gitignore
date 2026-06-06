@@ -15,3 +15,5 @@ venv/
 TEST_RUN.md
 NG_instance.pem
 ADMIN_INTERFACE_UPGRADES.md
+admin_demo.html
+admin_preview.html

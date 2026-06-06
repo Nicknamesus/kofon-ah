@@ -5,7 +5,7 @@
   --navy: #06192f;
   --navy-2: #0b2343;
   --navy-3: #102d52;
-  --blue: #1d8cff;
+  --blue: #132178;
   --blue-2: #0a64d8;
   --cyan: #32c5ff;
   --steel: #617086;
@@ -35,7 +35,7 @@ body {
   margin: 0;
   color: #152033;
   background:
-    radial-gradient(circle at 18% 8%, rgba(29, 140, 255, 0.08), transparent 30%),
+    radial-gradient(circle at 18% 8%, rgba(19, 33, 120, 0.08), transparent 30%),
     linear-gradient(135deg, #f6f8fb 0%, #eef3f8 100%);
 }
 
@@ -77,8 +77,8 @@ textarea {
 input:focus,
 select:focus,
 textarea:focus {
-  border-color: rgba(29, 140, 255, 0.75);
-  box-shadow: 0 0 0 3px rgba(29, 140, 255, 0.14);
+  border-color: rgba(19, 33, 120, 0.75);
+  box-shadow: 0 0 0 3px rgba(19, 33, 120, 0.14);
 }
 
 table {
@@ -179,11 +179,11 @@ tbody tr.selected {
   border-radius: 8px;
   color: #fff;
   background:
-    linear-gradient(135deg, rgba(29, 140, 255, 0.95), rgba(50, 197, 255, 0.72)),
+    linear-gradient(135deg, rgba(19, 33, 120, 0.95), rgba(50, 197, 255, 0.72)),
     var(--navy);
   font-size: 14px;
   font-weight: 800;
-  box-shadow: 0 12px 26px rgba(29, 140, 255, 0.25);
+  box-shadow: 0 12px 26px rgba(19, 33, 120, 0.25);
   overflow: hidden;
 }
 
@@ -339,7 +339,7 @@ img.brand-mark {
 }
 
 .password-toggle:hover {
-  background: rgba(29, 140, 255, 0.1);
+  background: rgba(19, 33, 120, 0.1);
 }
 
 .login-footnote {
@@ -380,7 +380,7 @@ img.brand-mark {
 .primary-button {
   color: #fff;
   background: linear-gradient(135deg, var(--blue-2), var(--blue));
-  box-shadow: 0 10px 22px rgba(29, 140, 255, 0.2);
+  box-shadow: 0 10px 22px rgba(19, 33, 120, 0.2);
 }
 
 .secondary-button {
@@ -431,7 +431,7 @@ img.brand-mark {
   color: #fff;
   background:
     linear-gradient(180deg, rgba(9, 33, 63, 0.96), rgba(4, 17, 32, 0.98)),
-    radial-gradient(circle at 70% 0%, rgba(29, 140, 255, 0.24), transparent 32%);
+    radial-gradient(circle at 70% 0%, rgba(19, 33, 120, 0.24), transparent 32%);
   border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -580,7 +580,7 @@ img.brand-mark {
   align-items: center;
   gap: 8px;
   min-height: 38px;
-  border: 1px solid rgba(29, 140, 255, 0.28);
+  border: 1px solid rgba(19, 33, 120, 0.28);
   border-radius: 3px;
   padding: 0 10px;
   color: #15304f;
@@ -808,7 +808,7 @@ mark.page-find-hit.current {
   bottom: -30px;
   width: 92px;
   height: 92px;
-  border: 1px solid rgba(29, 140, 255, 0.16);
+  border: 1px solid rgba(19, 33, 120, 0.16);
   border-radius: 50%;
   content: "";
 }
@@ -1021,6 +1021,34 @@ mark.page-find-hit.current {
      would round the fill's right corners and let grey show through the notches. */
   border-radius: 0;
   background: linear-gradient(90deg, var(--blue-2), var(--cyan));
+}
+
+/* Pie/donut legend: a colour swatch + label on the left, count on the right.
+   Reuses .compact-list (flex, space-between) so it lines up with the donut. */
+.legend-list .legend-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.legend-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.legend-list strong {
+  color: #20324c;
+  font-size: 13px;
+}
+
+/* Compact Bar/Pie switch that sits in the panel header next to the title. */
+.segmented.chart-toggle button {
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
 }
 
 tr.clickable {
@@ -1359,8 +1387,8 @@ tr[data-conversation] {
   border: 1px solid #cfe2ff;
   border-radius: 8px;
   background:
-    linear-gradient(135deg, rgba(29, 140, 255, 0.14), rgba(50, 197, 255, 0.06)),
-    repeating-linear-gradient(45deg, transparent 0 10px, rgba(29, 140, 255, 0.07) 10px 11px);
+    linear-gradient(135deg, rgba(19, 33, 120, 0.14), rgba(50, 197, 255, 0.06)),
+    repeating-linear-gradient(45deg, transparent 0 10px, rgba(19, 33, 120, 0.07) 10px 11px);
 }
 
 .product-thumb span {
@@ -1575,7 +1603,7 @@ tr[data-conversation] {
   padding: 30px;
   text-align: center;
   background:
-    linear-gradient(135deg, rgba(29, 140, 255, 0.08), rgba(50, 197, 255, 0.03)),
+    linear-gradient(135deg, rgba(19, 33, 120, 0.08), rgba(50, 197, 255, 0.03)),
     #fff;
   border-style: dashed;
 }
@@ -1597,7 +1625,7 @@ tr[data-conversation] {
   border: 2px solid #b8d8ff;
   border-radius: 8px;
   background:
-    linear-gradient(180deg, transparent 44%, rgba(29, 140, 255, 0.14) 44%),
+    linear-gradient(180deg, transparent 44%, rgba(19, 33, 120, 0.14) 44%),
     #fff;
 }
 
@@ -1640,8 +1668,8 @@ tr[data-conversation] {
 
 .toggle {
   display: inline-flex;
-  width: 38px;
-  height: 22px;
+  width: 44px;
+  height: 26px;
   border-radius: 999px;
   background: #cbd5e1;
   padding: 3px;
@@ -1655,10 +1683,12 @@ tr[data-conversation] {
 }
 
 .toggle::before {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: #fff;
+  /* Soft shadow so the round knob lifts off the pill track. */
+  box-shadow: 0 1px 2px rgba(15, 39, 69, 0.25);
   content: "";
   transition: transform 160ms ease;
 }
@@ -1668,7 +1698,8 @@ tr[data-conversation] {
 }
 
 .toggle.on::before {
-  transform: translateX(16px);
+  /* track width - knob width - 2*padding = 44 - 20 - 6 */
+  transform: translateX(18px);
 }
 
 .settings-hero {
@@ -1688,7 +1719,7 @@ tr[data-conversation] {
   border-radius: 8px;
   color: #fff;
   background:
-    linear-gradient(135deg, rgba(29, 140, 255, 0.98), rgba(50, 197, 255, 0.72)),
+    linear-gradient(135deg, rgba(19, 33, 120, 0.98), rgba(50, 197, 255, 0.72)),
     var(--navy);
   font-size: 22px;
   font-weight: 900;
@@ -1952,10 +1983,18 @@ textarea,
 
 .language-switch span,
 .nav-indicator,
-.status-light,
-.toggle,
-.toggle::before {
+.status-light {
   border-radius: 2px;
+}
+
+/* The sliding on/off switch stays fully round despite the squared theme above:
+   a pill track with a circular knob. */
+.toggle {
+  border-radius: 999px;
+}
+
+.toggle::before {
+  border-radius: 50%;
 }
 
 .metric-card::after {
