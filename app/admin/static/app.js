@@ -2248,7 +2248,30 @@ function systemSettingsPage() {
           ${field("Data Retention", "24 months", "select", ["6 months", "12 months", "24 months", "36 months"])}
         </div>
       </aside>
+      ${maintenancePanel()}
     </section>
+  `;
+}
+
+// Live operations panel (unlike the rest of System Settings, these buttons hit
+// real endpoints). Only rendered for users who hold the matching permission, so
+// it's empty for everyone but superadmin today.
+function maintenancePanel() {
+  const canBackup = can("backup.run");
+  const canRestart = can("restart.run");
+  if (!canBackup && !canRestart) return "";
+  return `
+    <article class="panel">
+      <h2>${msg("Maintenance", "运维")} ${pill("Live")}</h2>
+      <p class="muted">${msg(
+        "Bundle the catalog, knowledge base, and routing config into a downloadable backup, or restart the bot. Secrets (.env) are excluded.",
+        "将产品目录、知识库和路由配置打包为可下载的备份，或重启机器人。密钥（.env）不会包含在内。"
+      )}</p>
+      <div class="page-actions">
+        ${canBackup ? `<button class="primary-button" data-action="backup-create">${msg("Create backup now", "立即创建备份")}</button>` : ""}
+        ${canRestart ? `<button class="secondary-button" data-action="restart-bot">${msg("Restart bot", "重启机器人")}</button>` : ""}
+      </div>
+    </article>
   `;
 }
 
@@ -2691,6 +2714,39 @@ root.addEventListener("click", (event) => {
     apiForm("/admin/api/users/toggle", { user_id: id, csrf_token: state.csrf })
       .then(() => { loadUsers(); showToast(msg("Account removed.", "账号已删除。")); })
       .catch(() => showToast(msg("Could not remove account.", "无法删除账号。")));
+    return;
+  }
+  if (action === "backup-create") {
+    actionButton.disabled = true;
+    showToast(msg("Creating backup…", "正在创建备份…"));
+    apiForm("/admin/api/backup", { csrf_token: state.csrf })
+      .then((res) => {
+        if (!res.ok) throw new Error(String(res.status));
+        // Backups are listed + downloadable on the server-rendered page.
+        showToast(msg("Backup created — opening downloads.", "备份已创建 — 正在打开下载页。"));
+        window.open("/admin/backups", "_blank", "noopener");
+      })
+      .catch(() => showToast(msg("Could not create backup.", "无法创建备份。")))
+      .finally(() => { actionButton.disabled = false; });
+    return;
+  }
+  if (action === "restart-bot") {
+    if (!window.confirm(msg("Restart the bot?", "确定要重启机器人吗？"))) return;
+    actionButton.disabled = true;
+    apiForm("/admin/api/restart", { csrf_token: state.csrf })
+      .then((res) => {
+        if (res.ok) {
+          showToast(msg("Restart requested.", "已请求重启。"));
+        } else {
+          // The endpoint returns 501 until a production supervisor is wired up.
+          showToast(msg(
+            "Restart isn't configured yet — operators restart via deploy.sh.",
+            "重启尚未配置 — 运维人员需通过 deploy.sh 重启。"
+          ));
+        }
+      })
+      .catch(() => showToast(msg("Could not restart the bot.", "无法重启机器人。")))
+      .finally(() => { actionButton.disabled = false; });
     return;
   }
   if (action === "lead-action") {
