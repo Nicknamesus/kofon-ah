@@ -488,6 +488,235 @@ function downloadCsv(baseName, rows) {
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
+// ---- analytics PDF report ------------------------------------------------
+// The Analytics export is a printable, self-contained HTML report (inline
+// styles + inline-SVG charts) opened in a new window; the browser's print
+// dialog turns it into a PDF. No external libraries or backend needed.
+
+// Horizontal bar chart as standalone SVG (no dependency on the app stylesheet).
+function _reportBarsSVG(items, color) {
+  const W = 540, rowH = 38, padL = 168, padR = 64, top = 8;
+  const H = top * 2 + items.length * rowH;
+  const max = Math.max(...items.map((i) => i.value), 1);
+  const barW = W - padL - padR;
+  const rows = items
+    .map((it, i) => {
+      const y = top + i * rowH;
+      const w = Math.max(2, (it.value / max) * barW);
+      const cy = y + rowH / 2;
+      return `
+        <text x="${padL - 12}" y="${cy + 4}" text-anchor="end" font-size="13" fill="#33425c">${escapeHtml(it.label)}</text>
+        <rect x="${padL}" y="${y + 7}" width="${barW}" height="${rowH - 16}" rx="5" fill="#eef2f8"></rect>
+        <rect x="${padL}" y="${y + 7}" width="${w}" height="${rowH - 16}" rx="5" fill="${color}"></rect>
+        <text x="${padL + w + 8}" y="${cy + 4}" font-size="12" font-weight="700" fill="#1f2d44">${it.value}</text>`;
+    })
+    .join("");
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" xmlns="http://www.w3.org/2000/svg">${rows}</svg>`;
+}
+
+// Line/area chart as standalone SVG.
+function _reportLineSVG(values, xLabels) {
+  const W = 540, H = 230, padL = 40, padR = 16, padT = 14, padB = 34;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const max = Math.max(...values, 0) || 1;
+  const xAt = (i) => padL + (values.length === 1 ? plotW / 2 : i * (plotW / (values.length - 1)));
+  const yAt = (v) => padT + plotH - (v / max) * plotH;
+  const pts = values.map((v, i) => `${xAt(i)},${yAt(v)}`).join(" ");
+  const grid = [0, max / 2, max]
+    .map((t) => {
+      const y = yAt(t);
+      return `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#e7edf5"></line>
+        <text x="${padL - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="#8aa0bd">${Math.round(t)}</text>`;
+    })
+    .join("");
+  const xlab = (xLabels || [])
+    .map((t, i, arr) => {
+      const frac = arr.length === 1 ? 0.5 : i / (arr.length - 1);
+      const x = padL + frac * plotW;
+      const anchor = i === 0 ? "start" : i === arr.length - 1 ? "end" : "middle";
+      return `<text x="${x}" y="${H - padB + 18}" text-anchor="${anchor}" font-size="11" fill="#8aa0bd">${escapeHtml(t)}</text>`;
+    })
+    .join("");
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="rpt-fill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1d8cff" stop-opacity="0.26"/><stop offset="100%" stop-color="#1d8cff" stop-opacity="0"/>
+    </linearGradient></defs>
+    ${grid}${xlab}
+    <polyline points="${pts} ${xAt(values.length - 1)},${padT + plotH} ${padL},${padT + plotH}" fill="url(#rpt-fill)" stroke="none"></polyline>
+    <polyline points="${pts}" fill="none" stroke="#1d8cff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+    ${values.map((v, i) => `<circle cx="${xAt(i)}" cy="${yAt(v)}" r="3.5" fill="#1d8cff"></circle>`).join("")}
+  </svg>`;
+}
+
+// Donut showing a single percentage.
+function _reportDonutSVG(pct, color) {
+  const r = 54, c = 2 * Math.PI * r, on = c * (Math.max(0, Math.min(100, pct)) / 100);
+  return `<svg viewBox="0 0 150 150" width="150" height="150" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="75" cy="75" r="${r}" fill="none" stroke="#eef2f8" stroke-width="16"></circle>
+    <circle cx="75" cy="75" r="${r}" fill="none" stroke="${color}" stroke-width="16" stroke-linecap="round"
+      stroke-dasharray="${on} ${c - on}" transform="rotate(-90 75 75)"></circle>
+    <text x="75" y="83" text-anchor="middle" font-size="27" font-weight="800" fill="#0f2745">${pct}%</text>
+  </svg>`;
+}
+
+function _analyticsReportHtml() {
+  const pc = analytics.productConsults;
+  const qf = analytics.questionFrequency;
+  const pcTotal = pc.reduce((s, i) => s + i.value, 0) || 1;
+  const qfTotal = qf.reduce((s, i) => s + i.value, 0) || 1;
+  const trendMin = Math.min(...responseTrend);
+  const trendMax = Math.max(...responseTrend);
+  const trendAvg = Math.round(responseTrend.reduce((a, b) => a + b, 0) / responseTrend.length);
+  const trendChange = responseTrend[responseTrend.length - 1] - responseTrend[0];
+  const resolveCard = analytics.valueCards.find((c) => /resolution/i.test(c.label));
+  const resolvePct = resolveCard ? parseFloat(resolveCard.value) : trendMax;
+  const generated = new Date().toLocaleString();
+
+  const kpi = (cards) =>
+    cards
+      .map(
+        (c) => `<div class="kpi">
+          <span class="kpi-label">${escapeHtml(c.label)}</span>
+          <span class="kpi-value">${escapeHtml(c.value)}</span>
+          <span class="kpi-sub">${escapeHtml([c.delta, c.sub].filter(Boolean).join(" · "))}</span>
+        </div>`
+      )
+      .join("");
+
+  const tableRows = (items, total) =>
+    items
+      .map(
+        (i) =>
+          `<tr><td>${escapeHtml(i.label)}</td><td class="num">${i.value}</td><td class="num">${((i.value / total) * 100).toFixed(1)}%</td></tr>`
+      )
+      .join("");
+
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>KOFON Analytics Report</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+    color: #1f2d44; font-size: 13px; line-height: 1.5;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 28px; }
+  .report-header { display: flex; justify-content: space-between; align-items: flex-end;
+    border-bottom: 3px solid #132178; padding-bottom: 14px; margin-bottom: 22px; }
+  .report-header h1 { margin: 0 0 4px; font-size: 24px; color: #0d213c; }
+  .report-header p { margin: 0; color: #5a6b85; font-size: 12px; }
+  .brand { text-align: right; }
+  .brand strong { font-size: 18px; color: #132178; letter-spacing: 0.04em; }
+  .brand small { display: block; color: #8aa0bd; font-size: 11px; }
+  h2.section { font-size: 15px; color: #0d213c; margin: 26px 0 12px;
+    padding-bottom: 6px; border-bottom: 1px solid #e7edf5; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .kpi { border: 1px solid #e7edf5; border-radius: 10px; padding: 12px; background: #fbfdff; }
+  .kpi-label { display: block; color: #5a6b85; font-size: 11px; }
+  .kpi-value { display: block; font-size: 22px; font-weight: 800; color: #0f2745; margin: 4px 0; }
+  .kpi-sub { display: block; color: #8aa0bd; font-size: 11px; }
+  .card { border: 1px solid #e7edf5; border-radius: 12px; padding: 16px; margin-bottom: 16px;
+    page-break-inside: avoid; }
+  .card h3 { margin: 0 0 2px; font-size: 14px; color: #0d213c; }
+  .card p.cap { margin: 0 0 10px; color: #8aa0bd; font-size: 11px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: center; }
+  .resolve-row { display: flex; gap: 20px; align-items: center; }
+  .resolve-stats { display: grid; grid-template-columns: repeat(2, auto); gap: 8px 26px; }
+  .resolve-stats b { font-size: 18px; color: #0f2745; display: block; }
+  .resolve-stats span { color: #5a6b85; font-size: 11px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid #eef2f8; font-size: 12px; }
+  th { color: #5a6b85; font-weight: 700; background: #f7faff; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tfoot td { font-weight: 800; border-top: 2px solid #e7edf5; }
+  .footer { margin-top: 26px; padding-top: 10px; border-top: 1px solid #e7edf5;
+    color: #8aa0bd; font-size: 11px; text-align: center; }
+  @page { margin: 16mm; }
+</style></head>
+<body><div class="wrap">
+  <div class="report-header">
+    <div>
+      <h1>Analytics Report</h1>
+      <p>AI Agent impact across service efficiency, product demand, lead creation, and satisfaction.</p>
+    </div>
+    <div class="brand"><strong>KOFON</strong><small>AI Agent Console</small><small>Generated ${escapeHtml(generated)}</small></div>
+  </div>
+
+  <h2 class="section">Key results (last 30 days)</h2>
+  <div class="kpi-grid">${kpi(analytics.valueCards)}</div>
+
+  <h2 class="section">Operational overview</h2>
+  <div class="kpi-grid">${kpi(metrics)}</div>
+
+  <h2 class="section">AI resolve rate</h2>
+  <div class="card">
+    <h3>Resolved conversations over the last 30 days</h3>
+    <p class="cap">Daily resolve rate (%)</p>
+    <div class="resolve-row">
+      ${_reportDonutSVG(resolvePct, "#1d8cff")}
+      <div style="flex:1">
+        ${_reportLineSVG(responseTrend, ["30d ago", "20d ago", "10d ago", "Today"])}
+      </div>
+    </div>
+    <div class="resolve-stats" style="margin-top:12px">
+      <div><b>${trendMax}%</b><span>Peak</span></div>
+      <div><b>${trendMin}%</b><span>Low</span></div>
+      <div><b>${trendAvg}%</b><span>Average</span></div>
+      <div><b>${trendChange >= 0 ? "+" : ""}${trendChange} pts</b><span>30-day change</span></div>
+    </div>
+  </div>
+
+  <h2 class="section">Product consultation ranking</h2>
+  <div class="card">
+    <h3>Which KOFON lines are driving demand</h3>
+    <p class="cap">${pcTotal} consultations total</p>
+    ${_reportBarsSVG(pc, "#1d8cff")}
+    <table>
+      <thead><tr><th>Product line</th><th class="num">Consultations</th><th class="num">Share</th></tr></thead>
+      <tbody>${tableRows(pc, pcTotal)}</tbody>
+      <tfoot><tr><td>Total</td><td class="num">${pcTotal}</td><td class="num">100%</td></tr></tfoot>
+    </table>
+  </div>
+
+  <h2 class="section">High frequency questions</h2>
+  <div class="card">
+    <h3>Used for FAQ and knowledge base improvement</h3>
+    <p class="cap">${qfTotal} questions sampled</p>
+    ${_reportBarsSVG(qf, "#32c5ff")}
+    <table>
+      <thead><tr><th>Question topic</th><th class="num">Count</th><th class="num">Share</th></tr></thead>
+      <tbody>${tableRows(qf, qfTotal)}</tbody>
+      <tfoot><tr><td>Total</td><td class="num">${qfTotal}</td><td class="num">100%</td></tr></tfoot>
+    </table>
+  </div>
+
+  <div class="footer">KOFON AI Agent Console · Analytics Report · ${escapeHtml(generated)}</div>
+</div></body></html>`;
+}
+
+function exportAnalyticsReport() {
+  const win = window.open("", "_blank");
+  if (!win) {
+    showToast(msg("Please allow pop-ups to export the report.", "请允许弹出窗口以导出报告。"));
+    return;
+  }
+  win.document.open();
+  win.document.write(_analyticsReportHtml());
+  win.document.close();
+  // Print once the report window has laid out. The guard prevents the onload
+  // and timeout fallback from both firing the dialog.
+  let printed = false;
+  const print = () => {
+    if (printed) return;
+    printed = true;
+    win.focus();
+    win.print();
+  };
+  win.onload = print;
+  setTimeout(print, 600);
+}
+
 // Admin-user data for the User Permissions section.
 let adminUsers = [];
 let adminRoles = ["superadmin", "editor", "sales", "viewer"];
@@ -3534,14 +3763,7 @@ root.addEventListener("click", (event) => {
     return;
   }
   if (action === "export-analytics") {
-    const rows = [["KPI", "Value", "Note"]];
-    analytics.valueCards.forEach((c) => rows.push([c.label, c.value, c.sub || ""]));
-    rows.push([], ["Product consultation", "Conversations"]);
-    analytics.productConsults.forEach((p) => rows.push([p.label, p.value]));
-    rows.push([], ["High frequency question", "Count"]);
-    analytics.questionFrequency.forEach((q) => rows.push([q.label, q.value]));
-    downloadCsv("kofon-analytics", rows);
-    showToast(msg("Analytics exported.", "分析数据已导出。"));
+    exportAnalyticsReport();
     return;
   }
   if (action === "export-logs") {
