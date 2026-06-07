@@ -222,6 +222,15 @@ _STATUS_MAP = {
     "lead": "Lead created",
 }
 
+# Reverse of _STATUS_MAP for the admin status picker: the SPA's status label →
+# the `outcome` value we persist. "Unresolved" clears the outcome (None).
+_STATUS_TO_OUTCOME: dict[str, str | None] = {
+    "Resolved": "resolved",
+    "Needs takeover": "human_handoff",
+    "Lead created": "sell",
+    "Unresolved": None,
+}
+
 # Structured UI directives the agent emits to the chat widget (quick-reply
 # chips, etc.) that aren't part of the human-readable transcript. They'd
 # otherwise render as raw JSON in the admin conversation view, so we drop them.
@@ -362,7 +371,9 @@ async def conversation_detail(
         if content.get("kind") in _HIDDEN_MESSAGE_KINDS:
             continue
         is_ai = m.role in ("assistant", "bot", "ai")
-        entry: dict[str, Any] = {"from": "ai" if is_ai else "user"}
+        # Stable id lets the SPA remember per-message verdicts (correct/incorrect)
+        # across its live-refresh re-renders.
+        entry: dict[str, Any] = {"id": str(m.id), "from": "ai" if is_ai else "user"}
         # Cards are structured widgets ({kind, payload}); hand them to the SPA
         # whole so it can render them the way the chat widget does for clients,
         # instead of flattening them to a raw JSON blob.
@@ -376,6 +387,42 @@ async def conversation_detail(
         out_messages.append(entry)
     brief["messages"] = out_messages
     return brief
+
+
+@router.put("/conversations/{conversation_id}/status")
+async def conversation_set_status(
+    conversation_id: int, request: Request, ctx: AdminContext = Depends(require_csrf)
+) -> dict[str, Any]:
+    """Set a conversation's status (admins can move it between any of the SPA's
+    status labels, not just mark it unresolved)."""
+    _require(ctx, "conversations.write")
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        body = None
+    label = body.get("status") if isinstance(body, dict) else None
+    if label not in _STATUS_TO_OUTCOME:
+        return JSONResponse({"error": "Unknown status."}, status_code=400)  # type: ignore[return-value]
+
+    new_outcome = _STATUS_TO_OUTCOME[label]
+    async with SessionLocal() as s:
+        row = (
+            await s.execute(select(Conversation).where(Conversation.id == conversation_id))
+        ).scalar_one_or_none()
+        if row is None:
+            return JSONResponse({"error": "Not found."}, status_code=404)  # type: ignore[return-value]
+        row.outcome = new_outcome
+        await audit.record(
+            s,
+            user=ctx.user,
+            action="conversation.set_status",
+            entity_type="conversation",
+            entity_id=str(conversation_id),
+            diff={"status": label, "outcome": new_outcome},
+            ip=_client_ip(request),
+        )
+        await s.commit()
+    return {"id": str(conversation_id), "status": label}
 
 
 # ---- AI agent settings ---------------------------------------------------

@@ -1356,6 +1356,77 @@ tr[data-conversation] {
   font-weight: 800;
 }
 
+/* Selected answer verdict — Correct / Incorrect highlight their button and
+   tint the message bubble so the review state is obvious at a glance. */
+.answer-actions button.active-correct {
+  color: #fff;
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.answer-actions button.active-incorrect {
+  color: #fff;
+  background: #c0392b;
+  border-color: #c0392b;
+}
+
+.message-bubble.verdict-correct {
+  border-color: var(--green);
+  box-shadow: inset 3px 0 0 var(--green);
+}
+
+.message-bubble.verdict-incorrect {
+  border-color: #c0392b;
+  box-shadow: inset 3px 0 0 #c0392b;
+}
+
+.answer-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.verdict-tag {
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.verdict-tag-correct {
+  color: var(--green);
+  background: rgba(18, 128, 92, 0.12);
+}
+
+.verdict-tag-incorrect {
+  color: #c0392b;
+  background: rgba(192, 57, 43, 0.12);
+}
+
+/* Conversation status picker in the transcript header. Inherits the pill's
+   colour-by-status via the shared status token class. */
+.status-select {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 28px 5px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #1b2a44;
+  background-color: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%238794a8' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.status-select:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
 /* In-transcript widget cards (product results, gates, outcomes, etc.) rendered
    in the User Conversations view the same way the customer chat widget shows
    them. Read-only — no interactive controls. */

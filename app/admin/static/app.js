@@ -331,10 +331,47 @@ const answerReviews = [
   }
 ];
 
+// Manual Takeover is a preview/mockup: real takeover needs a live push channel
+// to the customer's widget + agent-handoff state the backend doesn't have yet
+// (see the in-page banner). So each session carries its own self-contained demo
+// transcript, context, and canned reply — nothing here reads live conversations.
 const takeoverSessions = [
-  { id: "take-001", name: "Liu Wei", company: "Wuhan Smart Logistics Co.", product: "AGV Products", wait: "06:21", status: "Waiting", priority: "High" },
-  { id: "take-002", name: "Zhang Min", company: "Hefei Laser Equipment", product: "KH Series Reducer", wait: "12:04", status: "Engineer needed", priority: "High" },
-  { id: "take-003", name: "Elena Rossi", company: "EuroMotion S.r.l.", product: "Harmonic Reducer", wait: "03:48", status: "Sales needed", priority: "Medium" }
+  {
+    id: "take-001", name: "Liu Wei", company: "Wuhan Smart Logistics Co.",
+    product: "AGV Products", wait: "06:21", status: "Waiting", priority: "High",
+    intent: "High purchase intent", state: "Need technical confirmation",
+    messages: [
+      { from: "user", text: "We're building a new AGV line and need drive motors. Can you recommend something?" },
+      { from: "ai", text: "Happy to help. Could you share the payload, top speed, and wheel diameter so I can match a motor?" },
+      { from: "user", text: "Payload is around 800 kg, but the slope and duty cycle are unusual for us — I'd rather talk to an engineer." },
+      { from: "ai", text: "Understood — I'll bring in a KOFON application engineer to confirm the right drive for your duty cycle." },
+    ],
+    reply: "Please share max speed, slope, wheel diameter, voltage, and duty cycle.",
+    note: "Ask for AGV payload, speed, slope, route condition, wheel diameter, battery voltage, expected duty cycle. Do not promise exact model before engineer check.",
+  },
+  {
+    id: "take-002", name: "Zhang Min", company: "Hefei Laser Equipment",
+    product: "KH Series Reducer", wait: "12:04", status: "Engineer needed", priority: "High",
+    intent: "Technical evaluation", state: "Awaiting backlash spec",
+    messages: [
+      { from: "user", text: "Does the KH series hold under 1 arcmin backlash after 2000 hours?" },
+      { from: "ai", text: "The KH series is rated at ≤1 arcmin, but lifetime backlash depends on load profile. Let me get an engineer to confirm for your case." },
+      { from: "user", text: "Yes please, this is for a laser cutting head so it's critical." },
+    ],
+    reply: "Can you send the cutting head's load cycle and mounting orientation?",
+    note: "Laser cutting application — precision critical. Confirm lifetime backlash under their duty cycle before quoting KH090.",
+  },
+  {
+    id: "take-003", name: "Elena Rossi", company: "EuroMotion S.r.l.",
+    product: "Harmonic Reducer", wait: "03:48", status: "Sales needed", priority: "Medium",
+    intent: "Quotation request", state: "Pricing + lead time",
+    messages: [
+      { from: "user", text: "I need a quote for 50 units of harmonic reducers, ratio 100:1, delivered to Italy." },
+      { from: "ai", text: "I can route this to our sales team for export pricing and lead time. Connecting you now." },
+    ],
+    reply: "I'll prepare an export quote for 50× ratio 100:1 — confirming lead time for Italy.",
+    note: "Export order, 50 units, ratio 100:1, ship to Italy. Hand to sales for pricing + Incoterms.",
+  },
 ];
 
 const customers = [
@@ -426,6 +463,23 @@ const chartViews = new Map();
 
 function chartView(id) {
   return chartViews.has(id) ? chartViews.get(id) : "bar";
+}
+
+// Per-answer review verdicts (correct / incorrect), keyed by message id. Like
+// switchStates, this lives in a module-level map so the live-refresh re-render
+// keeps whatever the reviewer marked. Visual only for now — no backend grading.
+const answerVerdicts = new Map();
+
+function answerVerdict(messageId) {
+  return answerVerdicts.get(String(messageId)) || null;
+}
+
+// Which demo session the Manual Takeover mockup is showing. Module-level so the
+// selection survives re-renders; defaults to the first session.
+let takeoverSelectedId = null;
+
+function activeTakeover() {
+  return takeoverSessions.find((s) => s.id === takeoverSelectedId) || takeoverSessions[0];
 }
 
 function switchControl(key, fallbackOn) {
@@ -609,6 +663,25 @@ async function loadConversationDetail(id) {
   } catch (err) {
     /* ignore */
   }
+}
+
+// Persist a new status for a conversation, then reflect it locally so the
+// header pill/select and the list row update without waiting for the next poll.
+function setConversationStatus(id, status, selectEl) {
+  if (selectEl) selectEl.disabled = true;
+  api("/admin/api/conversations/" + encodeURIComponent(id) + "/status", {
+    method: "PUT",
+    body: JSON.stringify({ status }),
+  })
+    .then((res) => {
+      if (!res.ok) throw new Error(String(res.status));
+      const convo = conversations.find((c) => c.id === id);
+      if (convo) convo.status = status;
+      showToast(msg("Status updated.", "状态已更新。"));
+      render();
+    })
+    .catch(() => showToast(msg("Could not update status.", "无法更新状态。")))
+    .finally(() => { if (selectEl) selectEl.disabled = false; });
 }
 
 // ---- live conversations --------------------------------------------------
@@ -1931,7 +2004,15 @@ function userConversationsPage() {
             <h2>${escapeHtml(selected.user)}</h2>
             <p>${escapeHtml(selected.company)} · ${escapeHtml(selected.product)} · ${escapeHtml(selected.time)}</p>
           </div>
-          ${pill(selected.status)}
+          ${
+            can("conversations.write")
+              ? `<select class="status-select ${cssToken(selected.status)}" data-action="set-conversation-status" data-conversation="${escapeHtml(selected.id)}" title="${msg("Change status", "更改状态")}">
+                  ${["Resolved", "Needs takeover", "Lead created", "Unresolved"]
+                    .map((s) => `<option value="${escapeHtml(s)}" ${selected.status === s ? "selected" : ""}>${escapeHtml(s)}</option>`)
+                    .join("")}
+                </select>`
+              : pill(selected.status)
+          }
         </div>
         <div class="customer-summary">
           ${selected.intent != null ? `<span>Intent ${escapeHtml(selected.intent)}</span>` : ""}
@@ -1943,21 +2024,26 @@ function userConversationsPage() {
             Array.isArray(selected.messages) && selected.messages.length
               ? selected.messages
                   .map(
-                    (message) => `
+                    (message) => {
+                    const verdict = message.from === "ai" && !message.card ? answerVerdict(message.id) : null;
+                    return `
                 <div class="message ${message.from}">
                   ${message.from === "ai" ? kofonLogo("message-avatar") : `<div class="message-avatar">U</div>`}
-                  <div class="message-bubble">
+                  <div class="message-bubble${verdict ? " verdict-" + verdict : ""}">
                     ${message.card ? renderConversationCard(message.card) : `<p>${escapeHtml(message.text)}</p>`}
                     ${
                       message.from === "ai" && !message.card
                         ? `
                           <div class="answer-meta">
-                            ${message.confidence != null ? `<span>Confidence ${escapeHtml(message.confidence)}%</span>` : ""}
+                            <div class="answer-meta-row">
+                              ${message.confidence != null ? `<span>Confidence ${escapeHtml(message.confidence)}%</span>` : ""}
+                              ${verdict === "correct" ? `<span class="verdict-tag verdict-tag-correct">${msg("Marked correct", "已标记为正确")}</span>` : ""}
+                              ${verdict === "incorrect" ? `<span class="verdict-tag verdict-tag-incorrect">${msg("Marked incorrect", "已标记为错误")}</span>` : ""}
+                            </div>
                             <div class="answer-actions">
-                              <button data-action="answer-correct">Correct</button>
-                              <button data-action="answer-incorrect">Incorrect</button>
+                              <button data-action="answer-correct" data-message="${escapeHtml(message.id)}" class="${verdict === "correct" ? "active-correct" : ""}">Correct</button>
+                              <button data-action="answer-incorrect" data-message="${escapeHtml(message.id)}" class="${verdict === "incorrect" ? "active-incorrect" : ""}">Incorrect</button>
                               <button data-action="add-knowledge">Add to Knowledge Base</button>
-                              <button data-action="mark-unresolved">Mark as unresolved</button>
                             </div>
                           </div>
                         `
@@ -1965,7 +2051,8 @@ function userConversationsPage() {
                     }
                   </div>
                 </div>
-              `
+              `;
+                  }
                   )
                   .join("")
               : `<p class="chat-empty">${msg("Select a conversation to view the transcript.", "选择一个对话以查看记录。")}</p>`
@@ -2554,9 +2641,8 @@ function answerReviewPage() {
 }
 
 function manualTakeoverPage() {
-  const active = takeoverSessions[0];
-  const chat = conversations[0] || { messages: [] };
-  const chatMessages = Array.isArray(chat.messages) ? chat.messages : [];
+  const active = activeTakeover();
+  const messages = Array.isArray(active.messages) ? active.messages : [];
 
   return `
     ${pageHeader(
@@ -2565,8 +2651,8 @@ function manualTakeoverPage() {
       `<button class="secondary-button">Availability</button>`
     )}
     ${warningBanner(
-      "User accounts are required to implement this feature. It is shown here as a preview only.",
-      "实现此功能需要用户账户。此处仅作为预览展示。"
+      "Preview / mockup only. Live takeover needs a real-time channel to the customer's chat widget, which the backend doesn't have yet — the data below is illustrative.",
+      "仅为预览/示意。实时接管需要与客户聊天窗口的实时通道，后端尚未实现 — 以下数据仅作示意。"
     )}
     <section class="takeover-layout">
       <aside class="panel session-list">
@@ -2579,7 +2665,7 @@ function manualTakeoverPage() {
         ${takeoverSessions
           .map(
             (session) => `
-              <button class="session-item ${session.id === active.id ? "active" : ""}">
+              <button class="session-item ${session.id === active.id ? "active" : ""}" data-action="select-takeover" data-session="${escapeHtml(session.id)}">
                 <span class="priority-line ${cssToken(session.priority)}"></span>
                 <div>
                   <strong>${escapeHtml(session.name)}</strong>
@@ -2601,23 +2687,23 @@ function manualTakeoverPage() {
           ${pill("Human taking over")}
         </div>
         <div class="chat-stream takeover">
-          ${chatMessages
+          ${messages
             .map(
               (message) => `
                 <div class="message ${message.from}">
-                  ${message.from === "ai" ? kofonLogo("message-avatar") : `<div class="message-avatar">U</div>`}
-                  <div class="message-bubble">${message.card ? renderConversationCard(message.card) : `<p>${escapeHtml(message.text)}</p>`}</div>
+                  ${
+                    message.from === "ai"
+                      ? kofonLogo("message-avatar")
+                      : `<div class="message-avatar">${message.from === "admin" ? "AD" : "U"}</div>`
+                  }
+                  <div class="message-bubble"><p>${escapeHtml(message.text)}</p></div>
                 </div>
               `
             )
             .join("")}
-          <div class="message admin">
-            <div class="message-avatar">AD</div>
-            <div class="message-bubble"><p>Hello, this is KOFON support. I will collect the operating data and route it to our AGV application engineer.</p></div>
-          </div>
         </div>
         <div class="reply-box">
-          <input value="Please share max speed, slope, wheel diameter, voltage, and duty cycle." />
+          <input value="${escapeHtml(active.reply || "")}" />
           <button class="primary-button" data-action="send-reply">Send</button>
         </div>
       </article>
@@ -2627,15 +2713,15 @@ function manualTakeoverPage() {
           <div><dt>Name</dt><dd>${escapeHtml(active.name)}</dd></div>
           <div><dt>Company</dt><dd>${escapeHtml(active.company)}</dd></div>
           <div><dt>Product</dt><dd>${escapeHtml(active.product)}</dd></div>
-          <div><dt>Intent</dt><dd>High purchase intent</dd></div>
-          <div><dt>Status</dt><dd>Need technical confirmation</dd></div>
+          <div><dt>Intent</dt><dd>${escapeHtml(active.intent || "—")}</dd></div>
+          <div><dt>Status</dt><dd>${escapeHtml(active.state || "—")}</dd></div>
         </dl>
         <h2>Internal Notes</h2>
         ${warningBanner(
           "Editing these notes changes the agent's memory and behaviour.",
           "修改这些备注会改变智能体的记忆与行为。"
         )}
-        <textarea>Ask for AGV payload, speed, slope, route condition, wheel diameter, battery voltage, expected duty cycle. Do not promise exact model before engineer check.</textarea>
+        <textarea>${escapeHtml(active.note || "")}</textarea>
         <button class="secondary-button full" data-action="save-note">Save Note</button>
       </aside>
     </section>
@@ -3040,6 +3126,11 @@ root.addEventListener("keydown", (event) => {
 // Avatar image drop-in: preview the chosen file in place.
 root.addEventListener("change", (event) => {
   const target = event.target;
+  if (target instanceof HTMLSelectElement && target.dataset.action === "set-conversation-status") {
+    const id = target.dataset.conversation;
+    if (id) setConversationStatus(id, target.value, target);
+    return;
+  }
   if (target instanceof HTMLInputElement && target.dataset.field === "avatar-upload") {
     const file = target.files && target.files[0];
     if (!file) return;
@@ -3181,6 +3272,14 @@ root.addEventListener("click", (event) => {
     });
     return;
   }
+  if (action === "select-takeover") {
+    const id = actionButton.dataset.session;
+    if (id && id !== takeoverSelectedId) {
+      takeoverSelectedId = id;
+      render();
+    }
+    return;
+  }
   if (action === "set-chart-view") {
     const id = actionButton.dataset.chart;
     const view = actionButton.dataset.view;
@@ -3292,11 +3391,27 @@ root.addEventListener("click", (event) => {
     return;
   }
 
+  // Answer review verdicts — visual only (no backend grading yet). Clicking the
+  // same verdict again clears it. State lives in answerVerdicts so it survives
+  // the live-refresh re-render.
+  if (action === "answer-correct" || action === "answer-incorrect") {
+    const id = actionButton.dataset.message;
+    if (id) {
+      const verdict = action === "answer-correct" ? "correct" : "incorrect";
+      if (answerVerdicts.get(id) === verdict) answerVerdicts.delete(id);
+      else answerVerdicts.set(id, verdict);
+      render();
+    }
+    showToast(
+      action === "answer-correct"
+        ? msg("Answer marked correct.", "回答已标记为正确。")
+        : msg("Answer marked incorrect.", "回答已标记为错误。")
+    );
+    return;
+  }
+
   const actionMessages = {
-    "answer-correct": ["Answer marked correct.", "回答已标记为正确。"],
-    "answer-incorrect": ["Answer sent to review queue.", "回答已送入审核队列。"],
     "add-knowledge": ["Candidate knowledge item added to review draft.", "候选知识已加入审核草稿。"],
-    "mark-unresolved": ["Conversation marked unresolved.", "对话已标记为未解决。"],
     "test-retrieval": ["Knowledge retrieval test completed.", "知识检索测试已完成。"],
     "faq-save": ["FAQ changes saved in prototype.", "FAQ 更改已保存到原型。"],
     "settings-save": ["Settings saved in prototype.", "设置已保存到原型。"],
