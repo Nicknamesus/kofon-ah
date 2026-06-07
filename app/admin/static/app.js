@@ -832,6 +832,7 @@ function _dailyBriefPdf() {
   const M = doc.M, CW = doc.contentW, right = M + CW;
 
   function heading(txt) {
+    doc.y += 16; // breathing room between sections
     doc.ensure(70);
     doc.text(M, doc.y, txt, 13, true, "#0d213c");
     doc.y += 16;
@@ -973,10 +974,11 @@ function _dailyBriefPdf() {
   heading("Knowledge & content");
   kpiGrid([
     { label: "Documents", value: `${cnt(documents, (d) => d.status === "Enabled")}/${documents.length}`, sub: "enabled" },
-    { label: "FAQs", value: `${cnt(faqs, (f) => f.enabled)}/${faqs.length}`, sub: "enabled" },
-    { label: "Products", value: `${cnt(products, (p) => p.status === "Active")}/${products.length}`, sub: "active" },
+    { label: "FAQs", value: faqs.length, sub: "published" },
+    { label: "Products", value: products.length, sub: "in catalog" },
     { label: "Reviews open", value: answerReviews.length, sub: "answer review" },
   ]);
+  note("Product catalog by status");
   const prodStatus = ["Active", "Draft", "Disabled"].map((st) => ({ label: st, value: cnt(products, (p) => p.status === st) }));
   bars(prodStatus, products.length, "#16b8a6");
 
