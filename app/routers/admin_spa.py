@@ -689,6 +689,80 @@ async def users_list(ctx: AdminContext = Depends(require_admin)) -> dict[str, An
 # ---- operation logs (audit) ----------------------------------------------
 
 
+# Machine action codes → human labels for the Operation Logs table.
+_ACTION_LABELS = {
+    "content.create": "Created content",
+    "content.update": "Updated content",
+    "content.delete": "Deleted content",
+    "user.create": "Created admin user",
+    "user.toggle": "Toggled admin user",
+    "routing.update": "Updated routing rules",
+    "backup.create": "Created backup",
+    "conversation.set_status": "Set conversation status",
+    "agent_settings.update": "Updated agent settings",
+    "agent_settings.avatar": "Updated agent avatar",
+}
+
+# Friendly names for the agent-settings keys so a settings change reads in plain
+# language rather than as raw JSON keys.
+_SETTING_LABELS = {
+    "agent_name": "Name",
+    "enabled_languages": "Languages",
+    "auto_create_lead": "Auto-create lead",
+    "require_confidence_threshold": "Confidence threshold",
+}
+
+
+def _audit_action_label(action: str) -> str:
+    return _ACTION_LABELS.get(action) or action.replace("_", " ").replace(".", " — ").capitalize()
+
+
+def _audit_value(v: Any) -> str:
+    if isinstance(v, bool):
+        return "on" if v else "off"
+    if isinstance(v, list):
+        return ", ".join(str(x) for x in v) if v else "none"
+    s = "—" if v is None else str(v)
+    return s if len(s) <= 60 else s[:57] + "…"
+
+
+def _describe_entity(d: dict[str, Any]) -> str:
+    """A short identifier for a created/deleted row from its most telling field."""
+    for key in ("name", "title", "label", "email", "question", "code", "slug", "id"):
+        if d.get(key):
+            return f"“{_audit_value(d[key])}”"
+    return f"{len(d)} fields"
+
+
+def _audit_details(action: str, diff: Any) -> str:
+    """A one-line, human-readable summary of what an action changed, derived
+    from the stored `diff`. Empty string when there's nothing meaningful to show
+    (the action label alone already says it)."""
+    if not isinstance(diff, dict) or not diff:
+        return ""
+    if isinstance(diff.get("created"), dict):
+        return f"Added {_describe_entity(diff['created'])}"
+    if isinstance(diff.get("deleted"), dict):
+        return f"Removed {_describe_entity(diff['deleted'])}"
+
+    parts: list[str] = []
+    if action == "agent_settings.update":
+        for key, label in _SETTING_LABELS.items():
+            if key in diff:
+                parts.append(f"{label}: {_audit_value(diff[key])}")
+    else:
+        for key, val in diff.items():
+            # diff_dict() records scalar edits as {"from": x, "to": y}.
+            if isinstance(val, dict) and "from" in val and "to" in val:
+                parts.append(f"{key}: {_audit_value(val['from'])} → {_audit_value(val['to'])}")
+            else:
+                parts.append(f"{key}: {_audit_value(val)}")
+
+    if len(parts) > 4:
+        parts = parts[:4] + [f"+{len(parts) - 4} more"]
+    return "; ".join(parts)
+
+
 @router.get("/audit")
 async def audit_list(ctx: AdminContext = Depends(require_admin)) -> dict[str, Any]:
     _require(ctx, "users.manage")
@@ -708,8 +782,9 @@ async def audit_list(ctx: AdminContext = Depends(require_admin)) -> dict[str, An
         logs.append({
             "time": _fmt_time(r.created_at),
             "actor": r.user_email or "System",
-            "action": r.action,
+            "action": _audit_action_label(r.action),
             "target": target or "—",
+            "details": _audit_details(r.action, r.diff),
             "result": "Success",
         })
     return {"logs": logs}

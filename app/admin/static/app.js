@@ -1578,7 +1578,7 @@ function pieChart(items, opts = {}) {
     stops.push(`#e7edf5 ${(cursor / total) * 360}deg 360deg`);
   }
 
-  const center = opts.centerLabel ? `<span>${escapeHtml(opts.centerLabel)}</span>` : "";
+  const center = opts.centerLabel ? `<span class="pie-center">${escapeHtml(opts.centerLabel)}</span>` : "";
   const legend = data
     .map(
       (d) => `
@@ -1591,7 +1591,7 @@ function pieChart(items, opts = {}) {
 
   return `
     <div class="donut-wrap">
-      <div class="donut" style="background:radial-gradient(circle at center,#fff 0 56%,transparent 57%),conic-gradient(${stops.join(", ")})">${center}</div>
+      <div class="donut" style="background:conic-gradient(${stops.join(", ")})">${center}</div>
       <ul class="compact-list legend-list">${legend}</ul>
     </div>
   `;
@@ -2867,7 +2867,7 @@ function permissionsPage() {
       ""
     )}
     <section class="role-grid">${roleCards}</section>
-    <section class="conversation-shell">
+    <section class="conversation-shell permissions-shell">
       <article class="panel">
         <div class="table-toolbar">
           <div>
@@ -2975,7 +2975,14 @@ function operationLogsPage() {
     <section class="panel">
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Target</th><th>Result</th></tr></thead>
+          <thead><tr>
+            <th>${msg("Time", "时间")}</th>
+            <th>${msg("Actor", "操作者")}</th>
+            <th>${msg("Action", "操作")}</th>
+            <th>${msg("Target", "对象")}</th>
+            <th>${msg("Details", "详情")}</th>
+            <th>${msg("Result", "结果")}</th>
+          </tr></thead>
           <tbody>
             ${logs
               .map(
@@ -2985,6 +2992,7 @@ function operationLogsPage() {
                     <td><strong>${escapeHtml(log.actor)}</strong></td>
                     <td>${escapeHtml(log.action)}</td>
                     <td>${escapeHtml(log.target)}</td>
+                    <td class="log-details">${log.details ? escapeHtml(log.details) : "<span class=\"muted\">—</span>"}</td>
                     <td>${pill(log.result)}</td>
                   </tr>
                 `

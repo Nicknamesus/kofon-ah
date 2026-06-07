@@ -985,15 +985,19 @@ mark.page-find-hit.current {
   width: 164px;
   aspect-ratio: 1;
   border-radius: 50%;
-  background:
-    radial-gradient(circle at center, #fff 0 56%, transparent 57%),
-    conic-gradient(var(--blue-light) var(--value), #e7edf5 0);
+  background: conic-gradient(var(--blue-light) var(--value), #e7edf5 0);
 }
 
-.donut span {
+/* Resolution-rate label sits on top of the full pie, so give it its own
+   readable chip instead of relying on a hollow donut centre. */
+.pie-center {
   color: #0f2745;
-  font-size: 25px;
+  font-size: 20px;
   font-weight: 900;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 1px 4px rgba(15, 39, 69, 0.18);
 }
 
 .compact-list {
@@ -1220,6 +1224,12 @@ tr[data-conversation] {
   grid-template-columns: minmax(0, 1.05fr) minmax(420px, 0.95fr);
   gap: 18px;
   align-items: start;
+}
+
+/* User Permissions reuses the two-column shell but wants the Administrators
+   table and the Create-administrator form to match height. */
+.permissions-shell {
+  align-items: stretch;
 }
 
 .filter-bar {
@@ -2209,7 +2219,7 @@ tr.row-active td {
 
 .role-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
 }
 
@@ -2514,6 +2524,16 @@ img.brand-mark,
   }
 }
 
+
+/* Operation Logs: keep the human-readable change summary compact and wrapping
+   so a long settings diff doesn't stretch the table. */
+.log-details {
+  max-width: 360px;
+  white-space: normal;
+  color: #41506a;
+  font-size: 12px;
+  line-height: 1.45;
+}
 
 /* ---- SPA integration: preview banner + helpers ---- */
 .preview-banner {
