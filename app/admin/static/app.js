@@ -2379,7 +2379,7 @@ function faqManagementPage() {
         <div class="table-wrap">
           <table>
             <thead>
-              <tr><th>Question</th><th>Category</th><th>Uses</th><th>Priority</th><th>Enabled</th><th>Action</th></tr>
+              <tr><th>Question</th><th>Category</th><th>Enabled</th><th>Action</th></tr>
             </thead>
             <tbody>
               ${faqs
@@ -2388,10 +2388,11 @@ function faqManagementPage() {
                     <tr>
                       <td><strong>${escapeHtml(faq.question)}</strong></td>
                       <td>${escapeHtml(faq.category)}</td>
-                      <td>${escapeHtml(faq.uses)}</td>
-                      <td>${pill(faq.priority)}</td>
                       <td>${switchControl("faq:" + faq.question, faq.enabled)}</td>
-                      <td><button class="text-button" data-action="faq-save">Edit</button></td>
+                      <td>
+                        <button class="text-button" data-action="faq-save">Edit</button>
+                        <button class="text-button danger" data-action="faq-delete">Delete</button>
+                      </td>
                     </tr>
                   `
                 )
@@ -3485,6 +3486,7 @@ root.addEventListener("click", (event) => {
     "add-knowledge": ["Candidate knowledge item added to review draft.", "候选知识已加入审核草稿。"],
     "test-retrieval": ["Knowledge retrieval test completed.", "知识检索测试已完成。"],
     "faq-save": ["FAQ changes saved in prototype.", "FAQ 更改已保存到原型。"],
+    "faq-delete": ["FAQ deleted in prototype.", "FAQ 已在原型中删除。"],
     "settings-save": ["Settings saved in prototype.", "设置已保存到原型。"],
     "lead-action": ["Follow-up task created.", "跟进任务已创建。"],
     "review-test": ["New answer test generated.", "新回答测试已生成。"],
