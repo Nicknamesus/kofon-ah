@@ -2484,19 +2484,31 @@ let agentSettings = {
 };
 
 // The agent avatar shown across the whole console (sidebar, login, settings
-// hero, chat bubbles). An upload replaces it with a data URL persisted per
-// browser, so it survives reloads until a new one is uploaded.
-const AVATAR_KEY = "kofon-admin-avatar";
+// hero, chat bubbles) AND in the customer-facing widget — all three render the
+// same static file the server stores at /agent-profilepic.jpeg. On load we use
+// the bare path (the browser revalidates it, so a refresh always shows the
+// latest upload); after an in-session upload we append ?v=<mtime> to force the
+// new image to appear immediately without a reload.
 const DEFAULT_AVATAR = "/agent-profilepic.jpeg";
-let agentAvatarSrc = localStorage.getItem(AVATAR_KEY) || DEFAULT_AVATAR;
+let agentAvatarSrc = DEFAULT_AVATAR;
 
-function setAgentAvatar(src) {
-  agentAvatarSrc = src;
-  try {
-    localStorage.setItem(AVATAR_KEY, src);
-  } catch (err) {
-    /* storage full/unavailable — avatar still applies for this session */
-  }
+// Send the chosen file to the backend, which validates + overwrites the shared
+// avatar file so the live agent picks it up too. Not via api(): a multipart
+// body must keep the browser-set Content-Type (with its boundary).
+function uploadAgentAvatar(file) {
+  const headers = { Accept: "application/json" };
+  if (state.csrf) headers["X-CSRF-Token"] = state.csrf;
+  const body = new FormData();
+  body.append("file", file);
+  fetch("/admin/api/agent-avatar", { method: "POST", credentials: "same-origin", headers, body })
+    .then(async (res) => {
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || msg("Could not update avatar.", "无法更新头像。"));
+      agentAvatarSrc = (data.src || DEFAULT_AVATAR) + "?v=" + (data.version || Date.now());
+      render();
+      showToast(msg("Avatar updated.", "头像已更新。"));
+    })
+    .catch((err) => showToast(err.message || msg("Could not update avatar.", "无法更新头像。")));
 }
 
 // English and Chinese are always active and cannot be turned off.
@@ -3219,9 +3231,7 @@ root.addEventListener("change", (event) => {
           showToast(msg("Avatar must be a square image.", "头像必须是正方形图片。"));
           return;
         }
-        setAgentAvatar(reader.result); // persist + apply across the whole console
-        render(); // refresh the sidebar, settings hero, and every chat avatar
-        showToast(msg("Avatar updated.", "头像已更新。"));
+        uploadAgentAvatar(file); // persist server-side so the live agent uses it too
       };
       probe.onerror = () => showToast(msg("Could not read image.", "无法读取图片。"));
       probe.src = reader.result;

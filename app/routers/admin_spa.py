@@ -15,9 +15,10 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, File, Request, UploadFile, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import func, select
 
@@ -484,6 +485,91 @@ async def agent_settings_put(
         await s.commit()
 
     return {"settings": updated}
+
+
+# ---- agent avatar --------------------------------------------------------
+# The avatar lives as a single shared static file the widget mount serves at
+# `/agent-profilepic.jpeg` (see app.main) — the same URL the admin SPA renders.
+# Overwriting it is what makes a new avatar show up in the customer-facing agent
+# as well as the console. Square + format are enforced here (no Pillow dep) so a
+# crafted request can't bypass the SPA's client-side check.
+_WIDGET_AVATAR_PATH = Path(__file__).resolve().parents[2] / "widget" / "agent-profilepic.jpeg"
+_MAX_AVATAR_BYTES = 2 * 1024 * 1024  # 2 MB
+
+
+def _image_dimensions(data: bytes) -> tuple[int, int] | None:
+    """Return (width, height) for a PNG or JPEG byte string, else None.
+
+    Just enough header parsing to validate the avatar without an image library.
+    """
+    # PNG: 8-byte signature, then an IHDR chunk whose width/height are the first
+    # two big-endian uint32s of its data.
+    if len(data) >= 24 and data[:8] == b"\x89PNG\r\n\x1a\n" and data[12:16] == b"IHDR":
+        return int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
+    # JPEG: scan segment markers for a Start-Of-Frame (SOFn), which carries the
+    # image height/width.
+    if len(data) >= 2 and data[:2] == b"\xff\xd8":
+        i, n = 2, len(data)
+        while i + 9 < n:
+            if data[i] != 0xFF:
+                i += 1
+                continue
+            marker = data[i + 1]
+            # Padding byte / standalone markers (SOI, EOI, RSTn) carry no length.
+            if marker in (0xFF, 0x01, 0xD8, 0xD9) or 0xD0 <= marker <= 0xD7:
+                i += 2
+                continue
+            seg_len = int.from_bytes(data[i + 2 : i + 4], "big")
+            # SOF0–SOF15, excluding DHT(C4), JPG(C8), DAC(CC).
+            if marker in (0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7,
+                          0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF):
+                h = int.from_bytes(data[i + 5 : i + 7], "big")
+                w = int.from_bytes(data[i + 7 : i + 9], "big")
+                return w, h
+            i += 2 + seg_len
+    return None
+
+
+@router.post("/agent-avatar")
+async def agent_avatar_upload(
+    request: Request,
+    file: UploadFile = File(...),
+    ctx: AdminContext = Depends(require_csrf),
+) -> dict[str, Any]:
+    _require(ctx, "settings.write")
+    data = await file.read()
+    if not data:
+        return JSONResponse({"error": "Empty file."}, status_code=400)  # type: ignore[return-value]
+    if len(data) > _MAX_AVATAR_BYTES:
+        return JSONResponse({"error": "Image too large (max 2 MB)."}, status_code=400)  # type: ignore[return-value]
+    dims = _image_dimensions(data)
+    if dims is None:
+        return JSONResponse(  # type: ignore[return-value]
+            {"error": "Unsupported image. Upload a PNG or JPG."}, status_code=400
+        )
+    if dims[0] != dims[1]:
+        return JSONResponse(  # type: ignore[return-value]
+            {"error": "Avatar must be a square image."}, status_code=400
+        )
+    try:
+        _WIDGET_AVATAR_PATH.write_bytes(data)
+    except OSError:
+        logger.exception("agent-avatar: failed to write %s", _WIDGET_AVATAR_PATH)
+        return JSONResponse({"error": "Could not save avatar."}, status_code=500)  # type: ignore[return-value]
+
+    version = int(_WIDGET_AVATAR_PATH.stat().st_mtime)
+    async with SessionLocal() as s:
+        await audit.record(
+            s,
+            user=ctx.user,
+            action="agent_settings.avatar",
+            entity_type="agent_settings",
+            entity_id="avatar",
+            ip=_client_ip(request),
+        )
+        await s.commit()
+
+    return {"ok": True, "src": "/agent-profilepic.jpeg", "version": version}
 
 
 # ---- products (catalog) --------------------------------------------------
