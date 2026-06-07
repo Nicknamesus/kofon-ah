@@ -429,6 +429,7 @@ const state = {
   productSearch: "",
   productFamily: null,
   productModal: false,
+  productEditIndex: null, // null = "Add" (save disabled); number = editing that product
   faqEditIndex: null,   // null = the form adds a new FAQ; number = editing that row
   sidebarOpen: false,
   toast: ""
@@ -459,6 +460,32 @@ async function apiForm(path, fields) {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams(fields).toString()
   });
+}
+
+// ---- CSV export ----------------------------------------------------------
+// Client-side export: turn in-memory rows into a CSV file and download it. No
+// backend round-trip — the data shown is already on the client.
+function csvEscape(value) {
+  const s = value == null ? "" : String(value);
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function toCsv(rows) {
+  return rows.map((row) => row.map(csvEscape).join(",")).join("\r\n");
+}
+
+function downloadCsv(baseName, rows) {
+  const stamp = new Date().toISOString().slice(0, 10);
+  // Prepend a UTF-8 BOM so Excel renders Chinese (and other non-ASCII) correctly.
+  const blob = new Blob(["﻿" + toCsv(rows)], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${baseName}-${stamp}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 // Admin-user data for the User Permissions section.
@@ -634,6 +661,7 @@ function saveAgentSettings(button) {
       if (data && data.settings) {
         agentSettings = { ...agentSettings, ...data.settings };
         seedAgentSettingToggles(); // reflect any server-side normalization
+        render(); // refresh the hero (agent name) with the saved value
       }
       showToast(msg("Agent settings saved.", "智能体设置已保存。"));
     })
@@ -1578,7 +1606,12 @@ function pieChart(items, opts = {}) {
     stops.push(`#e7edf5 ${(cursor / total) * 360}deg 360deg`);
   }
 
-  const center = opts.centerLabel ? `<span class="pie-center">${escapeHtml(opts.centerLabel)}</span>` : "";
+  // Charts with a centre label (e.g. the AI Resolution rate) render as a donut
+  // so the label sits in the hole; label-less charts render as a full pie.
+  const center = opts.centerLabel ? `<span>${escapeHtml(opts.centerLabel)}</span>` : "";
+  const fill = opts.centerLabel
+    ? `radial-gradient(circle at center,#fff 0 56%,transparent 57%),conic-gradient(${stops.join(", ")})`
+    : `conic-gradient(${stops.join(", ")})`;
   const legend = data
     .map(
       (d) => `
@@ -1591,7 +1624,7 @@ function pieChart(items, opts = {}) {
 
   return `
     <div class="donut-wrap">
-      <div class="donut" style="background:conic-gradient(${stops.join(", ")})">${center}</div>
+      <div class="donut" style="background:${fill}">${center}</div>
       <ul class="compact-list legend-list">${legend}</ul>
     </div>
   `;
@@ -1766,7 +1799,7 @@ function dashboardPage() {
     ${pageHeader(
       "Dashboard",
       "Monitor AI conversation quality, product demand, unresolved risks, and sales value.",
-      `<button class="secondary-button">Export Report</button><button class="primary-button">Daily Brief</button>`
+      `<button class="secondary-button" data-action="export-dashboard">Export Report</button><button class="primary-button">Daily Brief</button>`
     )}
     <section class="metric-grid">
       ${metrics.map(metricCard).join("")}
@@ -2092,7 +2125,7 @@ function userConversationsPage() {
     ${pageHeader(
       "User Conversations",
       "Review AI customer service records, qualify demand, and improve answer quality.",
-      `<button class="secondary-button">Batch Export</button>`,
+      `<button class="secondary-button" data-action="export-conversations">Batch Export</button>`,
       liveBadge()
     )}
     <section class="conversation-shell">
@@ -2123,6 +2156,7 @@ function userConversationsPage() {
 }
 
 function productCard(product) {
+  const index = products.indexOf(product);
   return `
     <article class="product-item">
       <div class="product-thumb">
@@ -2141,7 +2175,7 @@ function productCard(product) {
         </dl>
         <div class="item-footer">
           ${pill(product.status)}
-          <button class="text-button">Edit</button>
+          <button class="text-button" data-action="edit-product" data-index="${index}">${msg("Edit", "编辑")}</button>
         </div>
       </div>
     </article>
@@ -2224,39 +2258,55 @@ function productManagementPage() {
   `;
 }
 
+const PRODUCT_CATEGORIES = [
+  "Precision Planetary Reducer",
+  "Harmonic Reducer",
+  "AGV Products",
+  "Screw Products",
+  "Servo Electric Cylinder",
+  "Mechatronics Products"
+];
+
 function productModal() {
+  const editing = state.productEditIndex != null ? products[state.productEditIndex] : null;
+  const p = editing || {
+    name: "", category: PRODUCT_CATEGORIES[0], model: "",
+    description: "", parameters: "", scenarios: "", advantages: "", status: "Active"
+  };
+
   return `
-    <div class="modal-layer" role="dialog" aria-modal="true" aria-label="Add product">
+    <div class="modal-layer" role="dialog" aria-modal="true" aria-label="${editing ? msg("Edit product", "编辑产品") : msg("Add product", "添加产品")}">
       <button class="modal-backdrop" data-action="close-product-modal" aria-label="Close"></button>
       <section class="modal">
         <div class="modal-header">
           <div>
             <p class="eyebrow">Product Management</p>
-            <h2>Add Product</h2>
+            <h2>${editing ? msg("Edit Product", "编辑产品") : msg("Add Product", "添加产品")}</h2>
           </div>
           <button class="icon-close" data-action="close-product-modal" aria-label="Close">×</button>
         </div>
         <form class="form-grid" data-form="product">
-          ${field("Product Name", "F Series Precision Planetary Reducer")}
-          ${field("Product Category", "Precision Planetary Reducer", "select", [
-            "Precision Planetary Reducer",
-            "Harmonic Reducer",
-            "AGV Products",
-            "Screw Products",
-            "Servo Electric Cylinder",
-            "Mechatronics Products"
-          ])}
-          ${field("Model", "F060 / F090 / F120")}
-          ${field("Product Image", "Upload image or paste URL")}
-          ${field("Description", "High rigidity reducer for servo transmission.", "textarea")}
-          ${field("Technical Parameters", "Ratio 3-100; low backlash; compact coaxial structure.", "textarea")}
-          ${field("Application Scenarios", "Robotics, laser cutting equipment, packaging machines.", "textarea")}
-          ${field("Advantages", "High precision, stable torque output, broad motor compatibility.", "textarea")}
-          ${field("Related Documents", "F Series Product Manual.pdf")}
-          ${field("Status", "Active", "select", ["Active", "Draft", "Disabled"])}
+          ${field("Product Name", p.name, "input", [], "product-name")}
+          ${field("Product Category", p.category, "select", PRODUCT_CATEGORIES, "product-category")}
+          ${field("Model", p.model, "input", [], "product-model")}
+          ${field("Product Image", "", "input")}
+          ${field("Description", p.description, "textarea", [], "product-description")}
+          ${field("Technical Parameters", p.parameters, "textarea", [], "product-parameters")}
+          ${field("Application Scenarios", p.scenarios, "textarea", [], "product-scenarios")}
+          ${field("Advantages", p.advantages, "textarea", [], "product-advantages")}
+          ${field("Related Documents", "", "input")}
+          ${field("Status", p.status, "select", ["Active", "Draft", "Disabled"], "product-status")}
+          ${
+            editing
+              ? ""
+              : `<p class="modal-note">${msg(
+                  "Adding new products here isn’t available yet — the catalog is imported from the product database. You can edit existing products from the catalog.",
+                  "暂不支持在此新增产品——产品目录由产品数据库导入。您可以从目录中编辑现有产品。"
+                )}</p>`
+          }
           <div class="modal-actions">
-            <button type="button" class="secondary-button" data-action="close-product-modal">Cancel</button>
-            <button type="submit" class="primary-button">Save Product</button>
+            <button type="button" class="secondary-button" data-action="close-product-modal">${msg("Cancel", "取消")}</button>
+            <button type="submit" class="primary-button" ${editing ? "" : "disabled title=\"" + msg("Adding products isn’t available yet.", "暂不支持新增产品。") + "\""}>${msg("Save Product", "保存产品")}</button>
           </div>
         </form>
       </section>
@@ -2342,7 +2392,7 @@ function knowledgeBasePage() {
           <tbody>
             ${documents
               .map(
-                (doc) => `
+                (doc, index) => `
                   <tr>
                     <td><strong>${escapeHtml(doc.name)}</strong></td>
                     <td>${escapeHtml(doc.category)}</td>
@@ -2350,7 +2400,7 @@ function knowledgeBasePage() {
                     <td>${pill(doc.status)}</td>
                     <td>${escapeHtml(doc.updated)}</td>
                     <td>${escapeHtml(doc.owner)}</td>
-                    <td><button class="text-button">${doc.status === "Enabled" ? "Disable" : "Enable"}</button></td>
+                    <td><button class="text-button${doc.status === "Enabled" ? " danger" : ""}" data-action="toggle-document" data-index="${index}">${doc.status === "Enabled" ? msg("Disable", "停用") : msg("Enable", "启用")}</button></td>
                   </tr>
                 `
               )
@@ -2437,7 +2487,7 @@ function aiSettingsPage() {
         <div class="settings-hero">
           ${kofonLogo("agent-avatar")}
           <div>
-            <h2>KOFON Product Expert</h2>
+            <h2>${escapeHtml(agentSettings.agent_name)}</h2>
             <p>Industrial transmission AI assistant for customer service, product consultation, and lead qualification.</p>
           </div>
         </div>
@@ -2646,7 +2696,7 @@ function analyticsPage() {
     ${pageHeader(
       "Analytics",
       "Measure AI Agent impact across service efficiency, product demand, lead creation, and satisfaction.",
-      `<button class="secondary-button">Compare Period</button><button class="primary-button">Export Analytics</button>`
+      `<button class="secondary-button">Compare Period</button><button class="primary-button" data-action="export-analytics">Export Analytics</button>`
     )}
     <section class="metric-grid analytics-cards">
       ${analytics.valueCards.map(metricCard).join("")}
@@ -2970,7 +3020,7 @@ function operationLogsPage() {
     ${pageHeader(
       "Operation Logs",
       "Audit administrator actions, system events, AI lead creation, and knowledge index changes.",
-      `<button class="secondary-button">Download CSV</button>`
+      `<button class="secondary-button" data-action="export-logs">Download CSV</button>`
     )}
     <section class="panel">
       <div class="table-wrap">
@@ -3276,8 +3326,31 @@ root.addEventListener("submit", (event) => {
   }
 
   if (form.dataset.form === "product") {
-    setState({ productModal: false });
-    showToast(msg("Product editing is in development.", "产品编辑功能正在开发中。"));
+    // "Add" is intentionally disabled (no save path yet) — only edits persist.
+    if (state.productEditIndex == null) return;
+    const product = products[state.productEditIndex];
+    if (!product) {
+      setState({ productModal: false, productEditIndex: null });
+      return;
+    }
+    const get = (f) => form.querySelector(`[data-field="${f}"]`);
+    const name = (get("product-name")?.value || "").trim();
+    if (!name) {
+      showToast(msg("Product name is required.", "请填写产品名称。"));
+      return;
+    }
+    Object.assign(product, {
+      name,
+      category: get("product-category")?.value || product.category,
+      model: (get("product-model")?.value || "").trim(),
+      description: (get("product-description")?.value || "").trim(),
+      parameters: (get("product-parameters")?.value || "").trim(),
+      scenarios: (get("product-scenarios")?.value || "").trim(),
+      advantages: (get("product-advantages")?.value || "").trim(),
+      status: get("product-status")?.value || product.status,
+    });
+    setState({ productModal: false, productEditIndex: null });
+    showToast(msg("Product updated.", "产品已更新。"));
   }
 
   if (form.dataset.form === "user-create") {
@@ -3302,7 +3375,7 @@ root.addEventListener("click", (event) => {
     const page = pageButton.dataset.page;
     // A row can both navigate and pre-select a conversation (dashboard → details).
     const convId = pageButton.dataset.conversation;
-    const patch = { page, sidebarOpen: false, productModal: false };
+    const patch = { page, sidebarOpen: false, productModal: false, productEditIndex: null };
     if (convId) patch.selectedConversationId = convId;
     setState(patch);
     loadSection(page);
@@ -3416,11 +3489,68 @@ root.addEventListener("click", (event) => {
     return;
   }
   if (action === "open-product-modal") {
-    setState({ productModal: true });
+    setState({ productModal: true, productEditIndex: null });
+    return;
+  }
+  if (action === "edit-product") {
+    const index = Number(actionButton.dataset.index);
+    if (Number.isInteger(index) && products[index]) {
+      setState({ productModal: true, productEditIndex: index });
+    }
     return;
   }
   if (action === "close-product-modal") {
-    setState({ productModal: false });
+    setState({ productModal: false, productEditIndex: null });
+    return;
+  }
+  if (action === "toggle-document") {
+    const index = Number(actionButton.dataset.index);
+    const doc = documents[index];
+    if (doc) {
+      doc.status = doc.status === "Enabled" ? "Disabled" : "Enabled";
+      render();
+      showToast(
+        doc.status === "Enabled"
+          ? msg("Document enabled.", "文档已启用。")
+          : msg("Document disabled.", "文档已停用。")
+      );
+    }
+    return;
+  }
+  if (action === "export-dashboard") {
+    const rows = [["Metric", "Value", "Change", "Note"]];
+    metrics.forEach((m) => rows.push([m.label, m.value, m.delta || "", m.sub || ""]));
+    downloadCsv("kofon-dashboard-report", rows);
+    showToast(msg("Report exported.", "报告已导出。"));
+    return;
+  }
+  if (action === "export-conversations") {
+    const rows = [["ID", "User", "Company", "Product", "Time", "Status", "Summary"]];
+    conversations.forEach((c) =>
+      rows.push([c.id, c.user, c.company, c.product, c.time, c.status, c.summary])
+    );
+    downloadCsv("kofon-conversations", rows);
+    showToast(msg("Conversations exported.", "对话已导出。"));
+    return;
+  }
+  if (action === "export-analytics") {
+    const rows = [["KPI", "Value", "Note"]];
+    analytics.valueCards.forEach((c) => rows.push([c.label, c.value, c.sub || ""]));
+    rows.push([], ["Product consultation", "Conversations"]);
+    analytics.productConsults.forEach((p) => rows.push([p.label, p.value]));
+    rows.push([], ["High frequency question", "Count"]);
+    analytics.questionFrequency.forEach((q) => rows.push([q.label, q.value]));
+    downloadCsv("kofon-analytics", rows);
+    showToast(msg("Analytics exported.", "分析数据已导出。"));
+    return;
+  }
+  if (action === "export-logs") {
+    const rows = [["Time", "Actor", "Action", "Target", "Details", "Result"]];
+    logs.forEach((l) =>
+      rows.push([l.time, l.actor, l.action, l.target, l.details || "", l.result])
+    );
+    downloadCsv("kofon-operation-logs", rows);
+    showToast(msg("Logs exported.", "日志已导出。"));
     return;
   }
   if (action === "apply-product-search") {

@@ -88,7 +88,7 @@
     seed_other: { EN: "I have a question." },
     seed_human: { EN: "Connect me with a human engineer." },
     switched_lang: { EN: "Switched to {lang}. How can I help?" },
-    greeting: { EN: "Hi, I'm Kofon AI" },
+    greeting: { EN: "Hi, I'm {name}" },
     subtitle: { EN: "I help you find the right motion component, customize one, or fix an issue with an existing product." },
     status_label: { EN: "Online · usually replies in ~30s" },
     teaser_text: { EN: "Need help picking a gearbox? Ask me." },
@@ -132,7 +132,11 @@
     const lang = (widget && widget.state && widget.state.language) || "EN";
     const entry = I18N[key];
     if (!entry) return key;
-    return entry[lang] || entry.EN || key;
+    const str = entry[lang] || entry.EN || key;
+    // {name} resolves to the configured agent name (from the admin settings via
+    // /api/agent-config), so e.g. the greeting tracks a renamed agent.
+    const name = (widget && widget.cfg && widget.cfg.agentName) || "";
+    return str.replace(/\{name\}/g, name);
   }
 
   /* Minimal markdown — bold (**x**) and italics (_x_ or *x*).

@@ -988,16 +988,10 @@ mark.page-find-hit.current {
   background: conic-gradient(var(--blue-light) var(--value), #e7edf5 0);
 }
 
-/* Resolution-rate label sits on top of the full pie, so give it its own
-   readable chip instead of relying on a hollow donut centre. */
-.pie-center {
+.donut span {
   color: #0f2745;
-  font-size: 20px;
+  font-size: 25px;
   font-weight: 900;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 1px 4px rgba(15, 39, 69, 0.18);
 }
 
 .compact-list {
@@ -1884,6 +1878,19 @@ tr[data-conversation] {
   padding-top: 10px;
 }
 
+/* Explains why "Save Product" is disabled in the Add Product modal. */
+.modal-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fbfdff;
+  border: 1px solid var(--line);
+  color: #5a6b85;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .knowledge-layout,
 .faq-layout,
 .settings-layout,
@@ -2221,6 +2228,7 @@ tr.row-active td {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
+  margin-bottom: 24px;
 }
 
 .role-card {
