@@ -1636,7 +1636,7 @@ function loginPage() {
       </div>
       <section class="login-brand-panel">
         <div class="brand-lockup large">
-          <img class="brand-mark" src="/agent-profilepic.jpeg" alt="KOFON AI Agent" />
+          <img class="brand-mark" src="${escapeHtml(agentAvatarSrc)}" alt="KOFON AI Agent" />
           <div>
             <strong>KOFON</strong>
             <small>AI Agent Admin</small>
@@ -1684,7 +1684,7 @@ function sidebar() {
   return `
     <aside class="sidebar">
       <div class="brand-lockup">
-        <img class="brand-mark" src="/agent-profilepic.jpeg" alt="KOFON AI Agent" />
+        <img class="brand-mark" src="${escapeHtml(agentAvatarSrc)}" alt="KOFON AI Agent" />
         <div>
           <strong>KOFON</strong>
           <small>AI Agent Admin</small>
@@ -2483,9 +2483,21 @@ let agentSettings = {
   require_confidence_threshold: true
 };
 
-// The agent avatar shown across the console (settings hero, chat bubbles). An
-// upload replaces it with a data URL for the session; nothing is persisted yet.
-let agentAvatarSrc = "/agent-profilepic.jpeg";
+// The agent avatar shown across the whole console (sidebar, login, settings
+// hero, chat bubbles). An upload replaces it with a data URL persisted per
+// browser, so it survives reloads until a new one is uploaded.
+const AVATAR_KEY = "kofon-admin-avatar";
+const DEFAULT_AVATAR = "/agent-profilepic.jpeg";
+let agentAvatarSrc = localStorage.getItem(AVATAR_KEY) || DEFAULT_AVATAR;
+
+function setAgentAvatar(src) {
+  agentAvatarSrc = src;
+  try {
+    localStorage.setItem(AVATAR_KEY, src);
+  } catch (err) {
+    /* storage full/unavailable — avatar still applies for this session */
+  }
+}
 
 // English and Chinese are always active and cannot be turned off.
 const ALWAYS_ON_LANGUAGES = ["EN", "ZH"];
@@ -3207,8 +3219,8 @@ root.addEventListener("change", (event) => {
           showToast(msg("Avatar must be a square image.", "头像必须是正方形图片。"));
           return;
         }
-        agentAvatarSrc = reader.result;
-        render(); // updates the form preview and every kofonLogo() avatar at once
+        setAgentAvatar(reader.result); // persist + apply across the whole console
+        render(); // refresh the sidebar, settings hero, and every chat avatar
         showToast(msg("Avatar updated.", "头像已更新。"));
       };
       probe.onerror = () => showToast(msg("Could not read image.", "无法读取图片。"));
