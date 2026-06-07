@@ -979,7 +979,11 @@ function _dailyBriefPdf() {
     { label: "Reviews open", value: answerReviews.length, sub: "answer review" },
   ]);
   note("Product catalog by status");
-  const prodStatus = ["Active", "Draft", "Disabled"].map((st) => ({ label: st, value: cnt(products, (p) => p.status === st) }));
+  const statusCounts = {};
+  products.forEach((p) => { const st = p.status || "Other"; statusCounts[st] = (statusCounts[st] || 0) + 1; });
+  const prodStatus = Object.keys(statusCounts)
+    .map((st) => ({ label: st, value: statusCounts[st] }))
+    .sort((a, b) => b.value - a.value);
   bars(prodStatus, products.length, "#16b8a6");
 
   // Team & access.
@@ -1015,7 +1019,14 @@ function _dailyBriefPdf() {
   return doc.finish();
 }
 
-function exportDailyBrief() {
+async function exportDailyBrief() {
+  // Pull the real, full datasets first so the brief reflects the actual catalog
+  // size (~hundreds of products, not the 6 sample families), the live audit log,
+  // and the admin roster — regardless of which tabs the user has opened. Each
+  // loader fails soft (keeps current data) on error or missing permission.
+  showToast(msg("Preparing daily brief…", "正在生成每日简报…"));
+  await Promise.all([loadProducts(), loadKb(), loadLeads(), loadAudit(), loadUsers()]);
+
   const pdf = _dailyBriefPdf();
   const bytes = new Uint8Array(pdf.length);
   for (let i = 0; i < pdf.length; i++) bytes[i] = pdf.charCodeAt(i) & 0xff;
