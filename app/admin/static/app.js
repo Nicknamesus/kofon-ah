@@ -1258,6 +1258,14 @@ async function loadConversations() {
   }
 }
 
+// True while the user is interacting with a form control — notably an open
+// native <select> dropdown, which a full re-render would snap shut. Background
+// renders check this so they don't yank a control out from under the user.
+function fieldFocused() {
+  const a = document.activeElement;
+  return !!a && ["INPUT", "TEXTAREA", "SELECT"].includes(a.tagName);
+}
+
 async function loadConversationDetail(id) {
   try {
     const res = await api("/admin/api/conversations/" + encodeURIComponent(id));
@@ -1266,7 +1274,9 @@ async function loadConversationDetail(id) {
     const idx = conversations.findIndex((c) => c.id === detail.id);
     if (idx >= 0) conversations[idx] = detail;
     else conversations.push(detail);
-    render();
+    // Don't repaint while a dropdown/field is open — the data is stored and the
+    // next user action (or poll) will show it.
+    if (!fieldFocused()) render();
   } catch (err) {
     /* ignore */
   }
@@ -1304,9 +1314,9 @@ function conversationsSignature(list) {
 }
 
 async function refreshConversations() {
-  // Don't yank focus or reset a half-typed search / reply / note.
-  const active = document.activeElement;
-  if (active && ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName)) return;
+  // Don't yank focus or reset a half-typed search / reply / note (or an open
+  // status dropdown).
+  if (fieldFocused()) return;
   try {
     const params = new URLSearchParams({
       q: state.conversationSearch || "",
@@ -1972,10 +1982,17 @@ function showToast(message) {
   window.clearTimeout(toastTimer);
   state.toast = message;
   render();
-  toastTimer = window.setTimeout(() => {
+  const hide = () => {
+    // Defer hiding while the user has a control open (e.g. a status dropdown):
+    // the auto-hide render would otherwise snap it shut.
+    if (fieldFocused()) {
+      toastTimer = window.setTimeout(hide, 800);
+      return;
+    }
     state.toast = "";
     render();
-  }, 2400);
+  };
+  toastTimer = window.setTimeout(hide, 2400);
 }
 
 function cssToken(value) {
@@ -2132,6 +2149,7 @@ function barList(items, opts = {}) {
           `;
         })
         .join("")}
+      <div class="bar-total"><span>${msg("Total", "合计")}</span><b>${escapeHtml(String(total))}</b></div>
     </div>
   `;
 }
@@ -2773,14 +2791,20 @@ function productManagementPage() {
     body = matched.length
       ? `<div class="product-grid">${matched.map(productCard).join("")}</div>`
       : `<p class="table-empty">${msg("No products match your search.", "没有符合搜索条件的产品。")}</p>`;
-  } else if (state.productFamily && families[state.productFamily]) {
-    const list = families[state.productFamily];
+  } else if (state.productFamily) {
+    const list = families[state.productFamily] || [];
     subtitle = `${list.length} ${msg("products in this family", "个该系列产品")}`;
     body = `
       <button class="text-button back-link" data-action="product-back">← ${msg("All families", "全部系列")}</button>
-      <div class="product-grid">${list.map(productCard).join("")}</div>`;
+      ${
+        list.length
+          ? `<div class="product-grid">${list.map(productCard).join("")}</div>`
+          : `<p class="table-empty">${msg("No products in this category yet.", "该类别暂无产品。")}</p>`
+      }`;
   } else {
-    const familyNames = Object.keys(families);
+    // Show every category — the ones present in the catalog plus any added here
+    // that don't have products yet.
+    const familyNames = Array.from(new Set([...Object.keys(families), ...extraProductCategories]));
     subtitle = `${familyNames.length} ${msg("product families", "个产品系列")}`;
     body = `
       <div class="family-grid">
@@ -2791,7 +2815,7 @@ function productManagementPage() {
                 <div class="product-thumb"><span>${escapeHtml(fam.split(" ").map((w) => w[0]).join("").slice(0, 3))}</span></div>
                 <div>
                   <h3>${escapeHtml(fam)}</h3>
-                  <small>${families[fam].length} ${msg("products", "个产品")}</small>
+                  <small>${(families[fam] || []).length} ${msg("products", "个产品")}</small>
                 </div>
                 <span class="family-chevron">›</span>
               </button>
@@ -2805,7 +2829,7 @@ function productManagementPage() {
     ${pageHeader(
       "Product Management",
       "Maintain KOFON product catalog, technical parameters, applications, and AI recommendations.",
-      `<button class="secondary-button">Import Excel</button><button class="primary-button" data-action="open-product-modal">Add Product</button>`
+      `<button class="secondary-button">Import Excel</button><button class="secondary-button" data-action="add-product-category">${msg("Add Category", "添加类别")}</button><button class="primary-button" data-action="open-product-modal">Add Product</button>`
     )}
     <section class="panel">
       <div class="table-toolbar">
@@ -2829,6 +2853,22 @@ const PRODUCT_CATEGORIES = [
   "Mechatronics Products"
 ];
 
+// Categories the admin adds from the Product Management page (session-only, not
+// persisted). Kept separate from the catalog's own categories so they show as
+// empty families and appear in the product form's Category dropdown, without
+// duplicating whatever the real backend catalog already defines.
+let extraProductCategories = [];
+
+// Every category to offer in the product form's dropdown: catalog + defaults +
+// admin-added, de-duplicated in first-seen order.
+function allProductCategories() {
+  return Array.from(new Set([
+    ...PRODUCT_CATEGORIES,
+    ...products.map((p) => p.category).filter(Boolean),
+    ...extraProductCategories,
+  ]));
+}
+
 function productModal() {
   const editing = state.productEditIndex != null ? products[state.productEditIndex] : null;
   const p = editing || {
@@ -2849,7 +2889,7 @@ function productModal() {
         </div>
         <form class="form-grid" data-form="product">
           ${field("Product Name", p.name, "input", [], "product-name")}
-          ${field("Product Category", p.category, "select", PRODUCT_CATEGORIES, "product-category")}
+          ${field("Product Category", p.category, "select", allProductCategories(), "product-category")}
           ${field("Model", p.model, "input", [], "product-model")}
           ${field("Product Image", "", "input")}
           ${field("Description", p.description, "textarea", [], "product-description")}
@@ -4115,6 +4155,19 @@ root.addEventListener("click", (event) => {
   if (action === "apply-product-search") {
     const search = root.querySelector('[data-field="product-search"]')?.value || "";
     setState({ productSearch: search, productFamily: null });
+    return;
+  }
+  if (action === "add-product-category") {
+    const name = (window.prompt(msg("New product category name", "新产品类别名称")) || "").trim();
+    if (!name) return;
+    const existing = new Set(allProductCategories().map((c) => String(c).toLowerCase()));
+    if (existing.has(name.toLowerCase())) {
+      showToast(msg("That category already exists.", "该类别已存在。"));
+      return;
+    }
+    extraProductCategories.push(name);
+    setState({ productFamily: null, productSearch: "" }); // show the refreshed family grid
+    showToast(msg("Category added.", "类别已添加。"));
     return;
   }
   if (action === "open-family") {

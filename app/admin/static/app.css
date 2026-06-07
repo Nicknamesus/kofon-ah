@@ -1055,6 +1055,30 @@ mark.page-find-hit.current {
   color: #8aa0bd;
 }
 
+/* Total of all bar values, shown under the list with a divider. */
+.bar-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 2px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.bar-total span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.bar-total b {
+  color: #17304d;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
 .bar-track,
 .progress {
   height: 12px;
@@ -1070,11 +1094,10 @@ mark.page-find-hit.current {
   /* Reset: `.bar-row span` sets margin-top:3px (meant for the label caption),
      which otherwise pushes the fill down and leaves a grey gap at the top. */
   margin: 0;
-  min-width: 4px;
-  /* Square fill: the track's overflow:hidden rounds the outer (left) corners,
-     while the right edge stays a clean vertical line. An inherited 999px radius
-     would round the fill's right corners and let grey show through the notches. */
-  border-radius: 0;
+  min-width: 8px;
+  /* Pill fill: round both ends so a partial bar reads as a rounded capsule on
+     the grey track (matches the PDF report bars). */
+  border-radius: 999px;
   background: linear-gradient(90deg, var(--blue-2), var(--cyan));
 }
 
