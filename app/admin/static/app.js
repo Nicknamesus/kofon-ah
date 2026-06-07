@@ -221,11 +221,11 @@ let documents = [
 ];
 
 const faqs = [
-  { question: "How to select reduction ratio for a servo motor?", category: "Selection", uses: 438, priority: "High", enabled: true },
-  { question: "What parameters are required for AGV drive wheel selection?", category: "AGV", uses: 311, priority: "High", enabled: true },
-  { question: "Can KOFON provide non-standard reducer customization?", category: "Customization", uses: 226, priority: "Medium", enabled: true },
-  { question: "What is the warranty policy for servo electric cylinders?", category: "After-sales", uses: 184, priority: "Medium", enabled: true },
-  { question: "How to compare harmonic reducer and planetary reducer?", category: "Product Knowledge", uses: 176, priority: "Medium", enabled: false }
+  { question: "How to select reduction ratio for a servo motor?", category: "Selection", answer: "Start from the load speed and motor rated speed: ratio ≈ motor speed / required output speed, then verify torque, inertia matching, and duty cycle.", uses: 438, priority: "High", enabled: true },
+  { question: "What parameters are required for AGV drive wheel selection?", category: "AGV", answer: "Ask for payload, speed, wheel diameter, slope, voltage, duty cycle, and installation space.", uses: 311, priority: "High", enabled: true },
+  { question: "Can KOFON provide non-standard reducer customization?", category: "Customization", answer: "Yes. Provide torque, ratio, flange, shaft, and installation drawings, and engineering will evaluate a non-standard solution.", uses: 226, priority: "Medium", enabled: true },
+  { question: "What is the warranty policy for servo electric cylinders?", category: "After-sales", answer: "Standard servo electric cylinders carry a 12-month warranty from delivery under normal rated operating conditions.", uses: 184, priority: "Medium", enabled: true },
+  { question: "How to compare harmonic reducer and planetary reducer?", category: "Product Knowledge", answer: "Harmonic reducers suit compact, high-ratio, low-backlash joints; planetary reducers handle higher radial load and broad torque ranges.", uses: 176, priority: "Medium", enabled: false }
 ];
 
 let leads = [
@@ -429,6 +429,7 @@ const state = {
   productSearch: "",
   productFamily: null,
   productModal: false,
+  faqEditIndex: null,   // null = the form adds a new FAQ; number = editing that row
   sidebarOpen: false,
   toast: ""
 };
@@ -2265,11 +2266,12 @@ function productModal() {
 }
 
 function field(label, value = "", type = "input", options = [], dataField = "") {
+  const fieldAttr = dataField ? ` data-field="${escapeHtml(dataField)}"` : "";
   if (type === "textarea") {
     return `
       <label>
         <span>${escapeHtml(label)}</span>
-        <textarea>${escapeHtml(value)}</textarea>
+        <textarea${fieldAttr}>${escapeHtml(value)}</textarea>
       </label>
     `;
   }
@@ -2277,7 +2279,7 @@ function field(label, value = "", type = "input", options = [], dataField = "") 
     return `
       <label>
         <span>${escapeHtml(label)}</span>
-        <select>
+        <select${fieldAttr}>
           ${options.map((option) => `<option ${option === value ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}
         </select>
       </label>
@@ -2361,12 +2363,17 @@ function knowledgeBasePage() {
   `;
 }
 
+const FAQ_CATEGORIES = ["Selection", "AGV", "Customization", "After-sales", "Product Knowledge"];
+
 function faqManagementPage() {
+  const editing = state.faqEditIndex != null ? faqs[state.faqEditIndex] : null;
+  const draft = editing || { question: "", category: "AGV", answer: "", priority: "High", enabled: true };
+
   return `
     ${pageHeader(
       "FAQ Management",
       "Create, edit, prioritize, and enable common product and service questions.",
-      `<button class="primary-button" data-action="faq-save">Add FAQ</button>`
+      `<button class="secondary-button" data-action="faq-new">Add FAQ</button>`
     )}
     <section class="faq-layout">
       <article class="panel">
@@ -2379,37 +2386,41 @@ function faqManagementPage() {
         <div class="table-wrap">
           <table>
             <thead>
-              <tr><th>Question</th><th>Category</th><th>Enabled</th><th>Action</th></tr>
+              <tr><th>Question</th><th>Category</th><th>Edit</th><th>Delete</th></tr>
             </thead>
             <tbody>
-              ${faqs
-                .map(
-                  (faq) => `
-                    <tr>
+              ${
+                faqs.length
+                  ? faqs
+                      .map(
+                        (faq, index) => `
+                    <tr class="${index === state.faqEditIndex ? "row-active" : ""}">
                       <td><strong>${escapeHtml(faq.question)}</strong></td>
                       <td>${escapeHtml(faq.category)}</td>
-                      <td>${switchControl("faq:" + faq.question, faq.enabled)}</td>
-                      <td>
-                        <button class="text-button" data-action="faq-save">Edit</button>
-                        <button class="text-button danger" data-action="faq-delete">Delete</button>
-                      </td>
+                      <td><button class="text-button" data-action="faq-edit" data-index="${index}">Edit</button></td>
+                      <td><button class="text-button danger" data-action="faq-delete" data-index="${index}">Delete</button></td>
                     </tr>
                   `
-                )
-                .join("")}
+                      )
+                      .join("")
+                  : `<tr><td colspan="4" class="table-empty">${msg("No FAQs yet. Add one on the right.", "暂无 FAQ。请在右侧添加。")}</td></tr>`
+              }
             </tbody>
           </table>
         </div>
       </article>
       <aside class="panel form-panel">
-        <h2>Add / Edit FAQ</h2>
+        <h2>${editing ? msg("Edit FAQ", "编辑 FAQ") : msg("Add FAQ", "添加 FAQ")}</h2>
         <div class="form-stack">
-          ${field("Question", "What parameters are required for AGV drive wheel selection?")}
-          ${field("Category", "AGV", "select", ["Selection", "AGV", "Customization", "After-sales", "Product Knowledge"])}
-          ${field("Answer", "Ask for payload, speed, wheel diameter, slope, voltage, duty cycle, and installation space.", "textarea")}
-          ${field("Priority", "High", "select", ["High", "Medium", "Low"])}
-          <label class="inline-check"><input type="checkbox" checked /> Enabled</label>
-          <button class="primary-button" data-action="faq-save">Save FAQ</button>
+          ${field("Question", draft.question, "input", [], "faq-question")}
+          ${field("Category", draft.category, "select", FAQ_CATEGORIES, "faq-category")}
+          ${field("Answer", draft.answer, "textarea", [], "faq-answer")}
+          ${field("Priority", draft.priority, "select", ["High", "Medium", "Low"], "faq-priority")}
+          <label class="inline-check"><input type="checkbox" data-field="faq-enabled" ${draft.enabled ? "checked" : ""} /> Enabled</label>
+          <div class="form-actions">
+            <button class="primary-button" data-action="faq-save">${editing ? msg("Save FAQ", "保存 FAQ") : msg("Add FAQ", "添加 FAQ")}</button>
+            ${editing ? `<button class="secondary-button" data-action="faq-new">${msg("Cancel", "取消")}</button>` : ""}
+          </div>
         </div>
       </aside>
     </section>
@@ -3383,6 +3394,55 @@ root.addEventListener("click", (event) => {
     loadConversations();
     return;
   }
+  // FAQ add/edit/delete — session-only: the form drives the in-memory `faqs`
+  // list and re-renders. Nothing is persisted to the backend yet.
+  if (action === "faq-new") {
+    setState({ faqEditIndex: null });
+    return;
+  }
+  if (action === "faq-edit") {
+    const index = Number(actionButton.dataset.index);
+    if (Number.isInteger(index) && faqs[index]) setState({ faqEditIndex: index });
+    return;
+  }
+  if (action === "faq-delete") {
+    const index = Number(actionButton.dataset.index);
+    if (Number.isInteger(index) && faqs[index]) {
+      if (!window.confirm(msg("Delete this FAQ?", "确定删除该 FAQ 吗？"))) return;
+      faqs.splice(index, 1);
+      // Drop the editing target if it was removed; an edit in progress on a
+      // different row would shift, so the simplest safe choice is to reset.
+      setState({ faqEditIndex: null });
+      showToast(msg("FAQ deleted.", "FAQ 已删除。"));
+    }
+    return;
+  }
+  if (action === "faq-save") {
+    const get = (f) => root.querySelector(`[data-field="${f}"]`);
+    const question = (get("faq-question")?.value || "").trim();
+    if (!question) {
+      showToast(msg("Question is required.", "请填写问题。"));
+      return;
+    }
+    const entry = {
+      question,
+      category: get("faq-category")?.value || FAQ_CATEGORIES[0],
+      answer: (get("faq-answer")?.value || "").trim(),
+      priority: get("faq-priority")?.value || "Medium",
+      enabled: !!get("faq-enabled")?.checked,
+    };
+    if (state.faqEditIndex != null && faqs[state.faqEditIndex]) {
+      entry.uses = faqs[state.faqEditIndex].uses; // preserve usage count on edit
+      faqs[state.faqEditIndex] = entry;
+      showToast(msg("FAQ updated.", "FAQ 已更新。"));
+    } else {
+      entry.uses = 0;
+      faqs.unshift(entry);
+      showToast(msg("FAQ added.", "FAQ 已添加。"));
+    }
+    setState({ faqEditIndex: null });
+    return;
+  }
   if (action === "user-toggle") {
     const id = actionButton.dataset.user;
     apiForm("/admin/api/users/toggle", { user_id: id, csrf_token: state.csrf })
@@ -3485,8 +3545,6 @@ root.addEventListener("click", (event) => {
   const actionMessages = {
     "add-knowledge": ["Candidate knowledge item added to review draft.", "候选知识已加入审核草稿。"],
     "test-retrieval": ["Knowledge retrieval test completed.", "知识检索测试已完成。"],
-    "faq-save": ["FAQ changes saved in prototype.", "FAQ 更改已保存到原型。"],
-    "faq-delete": ["FAQ deleted in prototype.", "FAQ 已在原型中删除。"],
     "settings-save": ["Settings saved in prototype.", "设置已保存到原型。"],
     "lead-action": ["Follow-up task created.", "跟进任务已创建。"],
     "review-test": ["New answer test generated.", "新回答测试已生成。"],

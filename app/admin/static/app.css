@@ -1947,6 +1947,16 @@ tr[data-conversation] {
   height: 16px;
 }
 
+.form-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+tr.row-active td {
+  background: #eef4ff;
+}
+
 .toggle {
   display: inline-flex;
   width: 44px;
