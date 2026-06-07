@@ -223,7 +223,7 @@ P(
 P(
     "If you are new to the project, read Chapter 1 (Architecture) first; it is the map that "
     "makes every later chapter make sense. If you are here to perform a specific task — add a "
-    "product, add a language, swap the CRM — jump to Chapter 20 (Maintenance Cookbook), which "
+    "product, add a language, swap the CRM — jump to Chapter 21 (Maintenance Cookbook), which "
     "cross-references the detailed chapters."
 )
 P("Conventions used throughout:")
@@ -1130,9 +1130,163 @@ BULLET([
 PAGEBREAK()
 
 # ============================================================
-# 17. SEED DATA & LOADERS
+# 17. THE ADMIN CONSOLE
 # ============================================================
-H1("17. Seed content and the loaders")
+H1("17. The admin console")
+FILEBOX("app/admin/  ·  app/routers/admin.py · admin_api.py · admin_spa.py  ·  app/admin/static/  ·  app/agent/agent_settings.py")
+P(
+    "The admin console is the operator-facing web app at `/admin` — entirely separate from the "
+    "customer widget. It is where staff watch conversations, edit the catalog and knowledge "
+    "base, review answer quality, work the lead pipeline, and tune the bot. Like every `/api/*` "
+    "route, its routers are mounted **before** the catch-all `widget/` static mount, and it has "
+    "its own static directory served at `/admin/static`."
+)
+P(
+    "It is a **hybrid** of two cooperating surfaces behind one login. The primary one is a "
+    "single-page console (the SPA, `app/admin/static/app.js`) served at `/admin`. The second is "
+    "a set of **server-rendered** pages for the things that write to the database directly — the "
+    "content-CRUD registry at `/admin/content/*`, plus users, routing, audit, and backups. They "
+    "share auth, permissions, and the notification bus."
+)
+
+H2("Authentication, sessions, and RBAC")
+P(
+    "`app/models/admin.py` defines four tables: `admin_users` (email + bcrypt hash + role + "
+    "active flag), `admin_sessions` (a SHA-256-hashed cookie token with an expiry and a per-"
+    "session CSRF token), `admin_audit_log` (append-only record of who changed what), and "
+    "`notifications` (the durable sell/handoff feed). `app/admin/security.py` owns the policy: "
+    "password hashing/verification, session creation, and the **role → permission** map."
+)
+KV([
+    ["`superadmin`", "Everything (the `*` wildcard). The first account, created by bootstrap."],
+    ["`editor`", "content.read/write, routing.write, conversations.read, notifications.read, "
+     "settings.write, export.run."],
+    ["`sales`", "content.read, conversations.read, notifications.read."],
+    ["`viewer`", "content.read, conversations.read, notifications.read (read-only)."],
+], headers=("Role", "Permissions"))
+P(
+    "Permission strings are coarse capabilities (`content.write`, `conversations.read`, "
+    "`settings.write`, `users.manage`, `backup.run`, `restart.run`, …) listed in "
+    "`PERMISSIONS_ALL`. `app/admin/deps.py` turns them into FastAPI dependencies: `require_admin` "
+    "resolves the session cookie into an `AdminContext` (or 401s), `require_perm(\"x\")` adds a "
+    "capability check, and `require_csrf` guards every write by matching the submitted token "
+    "(form field `csrf_token` or `X-CSRF-Token` header) against the session. `AdminContext.can()` "
+    "is the same check the SPA uses to show/hide nav. **To add a permission**, extend "
+    "`PERMISSIONS_ALL` and the relevant role bundles, then gate the endpoint and the nav entry."
+)
+P(
+    "`app/admin/bootstrap.py` creates the first `superadmin` from `ADMIN_BOOTSTRAP_EMAIL` / "
+    "`ADMIN_BOOTSTRAP_PASSWORD` (or `--email/--password`). It is idempotent — a no-op once any "
+    "admin exists — and `deploy.sh` runs it after migrations. Login itself has a small in-memory "
+    "rate-limiter in `admin.py`. **Set `ADMIN_COOKIE_SECURE=true` in production** (behind HTTPS), "
+    "or the session cookie won't survive."
+)
+
+H2("The three routers")
+KV([
+    ["`app/routers/admin.py`", "Server-rendered **pages**: login/logout, the SPA shell at "
+     "`/admin` (renders `app.html`), notifications, the content registry pages, users, routing "
+     "editor, audit, backups."],
+    ["`app/routers/admin_api.py`", "**Writes**, SSE, downloads: content save/delete, user "
+     "create/toggle, notification ack, backup create, restart. Every write requires a permission "
+     "**and** a CSRF token, then 303-redirects back (or re-renders the form with an error). Also "
+     "hosts the notification SSE stream."],
+    ["`app/routers/admin_spa.py`", "The **JSON API** the SPA fetches: `/me` (identity + "
+     "permissions + CSRF), dashboard counts, conversations list/detail, products, KB, leads, "
+     "users, audit, and agent-settings. Reads require `require_admin` plus the relevant "
+     "permission."],
+], headers=("Router", "Responsibility"))
+
+H2("The content-CRUD registry — “edit the DB without code”")
+P(
+    "`app/admin/registry.py` is the engine behind the server-rendered `/admin/content/*` pages. "
+    "Instead of a hand-written router and template per table, each editable entity is described "
+    "once as an `EntitySpec` of `FieldSpec`s, and two generic templates (`content_list.html`, "
+    "`content_form.html`) render list/form/save/delete for all of them. It covers the "
+    "DB-authoritative content: `product_types`, `products`, `problem_types`, `solutions`, "
+    "`use_cases`, `use_case_product_types`, and `main_conversation_types`. Saving a product, "
+    "product type, or problem type **refreshes that row's embedding** (hash-keyed, so it's cheap "
+    "and idempotent), keeping vector search in step with edits. `templating.py` holds the shared "
+    "Jinja environment and the `NAV` table (label, URL, required permission)."
+)
+
+H2("The single-page console (app.js)")
+P(
+    "The SPA is dependency-free vanilla JS (no build step — the host is in China), a sibling in "
+    "spirit to the widget. It bootstraps from `GET /admin/api/me`, then renders a permission-"
+    "gated left nav and one page at a time. Pages: Dashboard, User Conversations, Manual "
+    "Takeover, Product Management, Knowledge Base, FAQ Management, AI Agent Settings, Customers & "
+    "Leads, Analytics, Answer Review, User Permissions, System Settings, and Operation Logs. Some "
+    "are **live** (backed by an `admin_spa` endpoint); others are clearly marked **preview** "
+    "(sample data behind a banner) until their backend lands. Charts are hand-rolled SVG — a line "
+    "chart plus bar/pie views with a per-chart toggle, and the AI-resolution donut."
+)
+P(
+    "**Client-side i18n is its own system.** Every page renders in English, then a `localizeDom()` "
+    "tree-walker rewrites text nodes through a `zhText` dictionary (with a `translateLooseText` "
+    "pass for number-bearing strings like timestamps, counts, and “Confidence N”), toggled by the "
+    "EN/中文 button. This is the **third** translation table in the project, independent of the "
+    "bot's `app/i18n.py` (Chapter 4) and the widget's `i18n-extra.js` (Chapter 16): a new admin "
+    "string that should appear in Chinese needs an entry here. Content that arrives from the "
+    "backend (product family names, KB summaries) is translated the same way; the authoritative "
+    "Chinese for product families also lives in `app/content_i18n.py`, so keep the two in step."
+)
+
+H2("Live features: notifications and conversations")
+BULLET([
+    "**Notification bell (SSE).** `admin.js` opens `GET /admin/api/notifications/stream` and "
+    "shows unread counts + toasts. The events originate in the side-effect handlers (Chapter "
+    "15): `app/admin/notify.py` stages a durable `notifications` row inside the handler's "
+    "transaction and publishes to the in-process `notify_bus` **after** commit, so subscribers "
+    "never see an uncommitted lead. The bus is single-process; the durable table means nothing "
+    "is lost when no one is watching.",
+    "**Live conversations.** The SPA polls `GET /admin/api/conversations` every six seconds, "
+    "re-rendering only when the list actually changes (an id/timestamp/status signature) and "
+    "never while a field is focused, so new chats and messages appear without a manual refresh. "
+    "A pulsing “Live” badge marks the view.",
+])
+
+H2("AI Agent Settings → the live agent")
+FILEBOX("app/agent/agent_settings.py")
+P(
+    "Most admin pages observe; the **AI Agent Settings** page changes how the bot behaves. It is "
+    "backed by a small JSON file (`agent_settings.json`, persisted so it survives restarts "
+    "without a migration, and captured by backups) holding four knobs: `agent_name`, "
+    "`enabled_languages`, `auto_create_lead`, and `require_confidence_threshold`. Both halves read "
+    "the same file via `get_agent_settings()`:"
+)
+KV([
+    ["`agent_name`", "Injected into every LLM system prompt (`app/agent/llm.py`) **and** shown as "
+     "the widget's display name via the public `GET /api/agent-config`."],
+    ["`enabled_languages`", "Gates `app/i18n._norm`: a disabled language a user picks falls back "
+     "to the default, and the widget hides it from the switcher (same `/api/agent-config`). The "
+     "default language can never be switched off."],
+    ["`auto_create_lead`", "When off, a `sell` outcome still closes the conversation but creates "
+     "no CRM lead / RFQ / division email (`app/sideeffects/handlers.handle_sell`)."],
+    ["`require_confidence_threshold`", "When off, the post-sales fix gate stops escalating "
+     "low-confidence fixes to a human (`postsales_fix_gate.py`)."],
+], headers=("Setting", "What it actually changes"))
+P(
+    "The admin reads/writes it through `GET`/`PUT /admin/api/agent-settings` (the write needs "
+    "`settings.write` + CSRF and is audit-logged). This is the cleanest example of the console "
+    "reaching into the running agent — settings flow one way (admin → file → agent) with the file "
+    "as the single source of truth."
+)
+
+H2("Backups and restart")
+P(
+    "`app/admin/backup.py` powers `POST /admin/api/backup` (`backup.run`): it bundles a fresh "
+    "seed export plus `routing.yaml`, `config.kofon.js`, and `agent_settings.json` into a "
+    "timestamped `tar.gz` under `ADMIN_BACKUP_DIR`, listed and downloadable at `/admin/backups`. "
+    "The restart endpoint is a stub returning 501 until a production supervisor is wired up — "
+    "operators restart via `deploy.sh` for now."
+)
+PAGEBREAK()
+
+# ============================================================
+# 18. SEED DATA & LOADERS
+# ============================================================
+H1("18. Seed content and the loaders")
 FILEBOX("seed/  ·  app/seed/")
 P(
     "`seed/` is the source of truth for everything the bot reads: editable YAML/CSV that domain "
@@ -1207,9 +1361,9 @@ P(
 PAGEBREAK()
 
 # ============================================================
-# 18. DEPLOYMENT
+# 19. DEPLOYMENT
 # ============================================================
-H1("18. Deployment and project configuration")
+H1("19. Deployment and project configuration")
 FILEBOX("deploy.sh  ·  docker-compose.yml  ·  .env.example  ·  pyproject.toml")
 
 H2("deploy.sh — the one command")
@@ -1258,9 +1412,9 @@ P(
 PAGEBREAK()
 
 # ============================================================
-# 19. SMOKE TESTS
+# 20. SMOKE TESTS
 # ============================================================
-H1("19. Smoke tests")
+H1("20. Smoke tests")
 FILEBOX("app/agent/smoke_*.py")
 P(
     "The `smoke_2*` / `smoke_3*` / `smoke_4.py` scripts are runnable end-to-end checks for each "
@@ -1277,9 +1431,9 @@ P(
 PAGEBREAK()
 
 # ============================================================
-# 20. MAINTENANCE COOKBOOK
+# 21. MAINTENANCE COOKBOOK
 # ============================================================
-H1("20. Maintenance cookbook")
+H1("21. Maintenance cookbook")
 P(
     "Common tasks, each pointing back to the detailed chapters. After any content or schema "
     "change, re-run the relevant provisioning step and the matching smoke test."
@@ -1338,6 +1492,19 @@ NUM([
     "Register it in `build_graph` (`app/agent/graph.py`) and extend the dispatch function plus "
     "the allowed-target list of every conditional edge that can reach or leave it.",
     "If it emits a new card kind, add a renderer in `widget/widget.js`.",
+])
+
+H3("Administer the console (admins, permissions, settings)")
+NUM([
+    "Create the first operator: `python -m app.admin.bootstrap` (uses `ADMIN_BOOTSTRAP_*`), then "
+    "add the rest from the SPA's User Permissions page or `/admin/users` (needs `users.manage`).",
+    "Add a permission: extend `PERMISSIONS_ALL` and the role bundles in `app/admin/security.py`, "
+    "then gate the endpoint (`require_perm`) and the SPA nav entry.",
+    "Change bot behaviour from the console: the AI Agent Settings page (name, languages, "
+    "auto-lead, confidence gate) writes `agent_settings.json`, which the agent reads live — see "
+    "Chapter 17.",
+    "Translate a new admin string to Chinese: add it to the `zhText` table in "
+    "`app/admin/static/app.js` (the SPA has its own translation layer).",
 ])
 
 P("")

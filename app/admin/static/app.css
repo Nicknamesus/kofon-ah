@@ -1356,6 +1356,135 @@ tr[data-conversation] {
   font-weight: 800;
 }
 
+/* In-transcript widget cards (product results, gates, outcomes, etc.) rendered
+   in the User Conversations view the same way the customer chat widget shows
+   them. Read-only — no interactive controls. */
+.widget-card {
+  display: grid;
+  gap: 8px;
+}
+
+.widget-card-title {
+  margin: 0;
+  font-weight: 800;
+  color: #1b2a44;
+  font-size: 13px;
+}
+
+.widget-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+}
+
+.widget-card-row-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.widget-card-row-main strong {
+  color: #1b2a44;
+  font-size: 13px;
+}
+
+.widget-card-row-meta {
+  color: var(--blue-2);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.widget-card-row-sub {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.widget-card-cta {
+  flex: none;
+  color: var(--blue-2);
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.widget-card-cta:hover {
+  text-decoration: underline;
+}
+
+.widget-card-steps,
+.widget-card-fields {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  color: #23324a;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.widget-card-field-label {
+  font-weight: 700;
+  color: #1b2a44;
+}
+
+.widget-card-enum {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.widget-card-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.widget-card-pill {
+  border: 1px solid #cfe2ff;
+  border-radius: 999px;
+  padding: 3px 11px;
+  color: var(--blue-2);
+  background: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.widget-card-badge {
+  justify-self: start;
+  border-radius: 999px;
+  padding: 3px 11px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #fff;
+  background: var(--navy-2);
+}
+
+.widget-card-badge-sell {
+  background: var(--green);
+}
+
+.widget-card-badge-human_handoff {
+  background: var(--blue-2);
+}
+
+.widget-card-badge-resolved {
+  background: var(--cyan);
+}
+
+.widget-card-outcome-title {
+  margin: 0;
+  font-weight: 800;
+  color: #1b2a44;
+}
+
 .product-grid {
   display: grid;
   gap: 14px;

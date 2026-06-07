@@ -1795,6 +1795,121 @@ function conversationTable(list, selectable = true, navigateTo = null) {
   `;
 }
 
+// Render the structured chat "cards" (product results, gates, outcomes, etc.)
+// the same way the customer widget does, so admins see what the client saw
+// instead of a raw JSON blob. Read-only: interactive controls become static.
+function renderConversationCard(card) {
+  const kind = (card && card.kind) || "";
+  const p = (card && card.payload) || {};
+  switch (kind) {
+    case "product_results":
+      return convoCard(
+        p.title || msg("Matching products", "匹配产品"),
+        (p.results || [])
+          .map((r) => {
+            const specs = r.specs || {};
+            const bits = [];
+            if (specs.ratio != null) bits.push(`${specs.ratio}:1`);
+            if (specs.nominal_torque_nm != null) bits.push(`${specs.nominal_torque_nm} Nm`);
+            if (specs.backlash_arcmin != null) bits.push(`${specs.backlash_arcmin} arcmin`);
+            return convoProductRow(r.sku || r.name, r.name, bits.join(" · "), r.datasheet_url || r.product_page_url);
+          })
+          .join("") || `<p>${msg("No matches.", "无匹配。")}</p>`
+      );
+    case "recommendations":
+      return convoCard(
+        p.title || msg("Recommended families", "推荐系列"),
+        (p.recommendations || [])
+          .map((r) => {
+            const meta = [r.fit_score != null ? `${msg("Fit", "匹配度")} ${r.fit_score}` : "", r.family]
+              .filter(Boolean)
+              .join(" · ");
+            return convoProductRow(r.name, r.rationale, meta, r.product_page_url);
+          })
+          .join("") || `<p>${msg("No curated match.", "暂无推荐。")}</p>`
+      );
+    case "problem_candidates":
+      return convoCard(
+        p.title || msg("Closest matches", "最接近的匹配"),
+        (p.candidates || [])
+          .map((c) => convoProductRow(c.label, c.description, "", null))
+          .join("")
+      );
+    case "problem_match": {
+      const problem = p.problem || {};
+      const solution = p.solution || {};
+      const steps = Array.isArray(solution.steps) ? solution.steps : [];
+      const body = `
+        ${problem.description ? `<p>${escapeHtml(problem.description)}</p>` : ""}
+        ${solution.summary ? `<p><em>${escapeHtml(solution.summary)}</em></p>` : ""}
+        ${steps.length ? `<ol class="widget-card-steps">${steps.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ol>` : ""}
+      `;
+      return convoCard(problem.label || msg("Likely issue", "可能的问题"), body);
+    }
+    case "gate": {
+      const options = [p.yes_label, p.no_label, p.dismiss_label]
+        .filter(Boolean)
+        .map((label) => `<span class="widget-card-pill">${escapeHtml(label)}</span>`)
+        .join("");
+      return convoCard(
+        p.question || msg("Are these helpful?", "这些有帮助吗？"),
+        `<div class="widget-card-options">${options}</div>`,
+        "gate"
+      );
+    }
+    case "outcome": {
+      const badges = {
+        sell: msg("Sales", "销售"),
+        human_handoff: msg("Engineer", "工程师"),
+        resolved: msg("Resolved", "已解决"),
+      };
+      const badge = badges[p.outcome] || msg("Done", "完成");
+      const body = `
+        <span class="widget-card-badge widget-card-badge-${escapeHtml(p.outcome || "info")}">${escapeHtml(badge)}</span>
+        ${p.title ? `<p class="widget-card-outcome-title">${escapeHtml(p.title)}</p>` : ""}
+        ${p.next_step ? `<p>${msg("Next", "下一步")}: ${escapeHtml(p.next_step)}</p>` : ""}
+      `;
+      return `<div class="widget-card widget-card-outcome">${body}</div>`;
+    }
+    case "custom_config_form": {
+      const fields = (p.fields || [])
+        .map((f) => {
+          const val = f.value != null && f.value !== "" ? escapeHtml(String(f.value)) : "—";
+          const enumHint = f.enum && f.enum.length ? ` <span class="widget-card-enum">(${f.enum.map((v) => escapeHtml(String(v))).join(" / ")})</span>` : "";
+          return `<li><span class="widget-card-field-label">${escapeHtml(f.label || f.key)}</span>: ${val}${enumHint}</li>`;
+        })
+        .join("");
+      const title = p.family_name
+        ? `${msg("Configure", "配置")} ${escapeHtml(p.family_name)}`
+        : msg("Custom configuration", "自定义配置");
+      return convoCard(title, fields ? `<ul class="widget-card-fields">${fields}</ul>` : "");
+    }
+    default:
+      // Unknown kind — degrade gracefully to a labelled block, not raw JSON.
+      return convoCard(escapeHtml(kind || "card"), "");
+  }
+}
+
+function convoCard(title, body, variant = "") {
+  return `
+    <div class="widget-card${variant ? " widget-card-" + variant : ""}">
+      <p class="widget-card-title">${escapeHtml(title)}</p>
+      ${body || ""}
+    </div>`;
+}
+
+function convoProductRow(primary, secondary, meta, link) {
+  return `
+    <div class="widget-card-row">
+      <div class="widget-card-row-main">
+        <strong>${escapeHtml(primary || "")}</strong>
+        ${meta ? `<span class="widget-card-row-meta">${escapeHtml(meta)}</span>` : ""}
+        ${secondary ? `<span class="widget-card-row-sub">${escapeHtml(secondary)}</span>` : ""}
+      </div>
+      ${link ? `<a class="widget-card-cta" href="${escapeHtml(link)}" target="_blank" rel="noopener">${msg("View", "查看")} →</a>` : ""}
+    </div>`;
+}
+
 function userConversationsPage() {
   const query = state.conversationSearch.trim().toLowerCase();
   const filtered = conversations.filter((item) => {
@@ -1832,9 +1947,9 @@ function userConversationsPage() {
                 <div class="message ${message.from}">
                   ${message.from === "ai" ? kofonLogo("message-avatar") : `<div class="message-avatar">U</div>`}
                   <div class="message-bubble">
-                    <p>${escapeHtml(message.text)}</p>
+                    ${message.card ? renderConversationCard(message.card) : `<p>${escapeHtml(message.text)}</p>`}
                     ${
-                      message.from === "ai"
+                      message.from === "ai" && !message.card
                         ? `
                           <div class="answer-meta">
                             ${message.confidence != null ? `<span>Confidence ${escapeHtml(message.confidence)}%</span>` : ""}
@@ -2491,7 +2606,7 @@ function manualTakeoverPage() {
               (message) => `
                 <div class="message ${message.from}">
                   ${message.from === "ai" ? kofonLogo("message-avatar") : `<div class="message-avatar">U</div>`}
-                  <div class="message-bubble"><p>${escapeHtml(message.text)}</p></div>
+                  <div class="message-bubble">${message.card ? renderConversationCard(message.card) : `<p>${escapeHtml(message.text)}</p>`}</div>
                 </div>
               `
             )

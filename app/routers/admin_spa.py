@@ -235,7 +235,20 @@ def _convo_status(row: Conversation) -> str:
 
 
 def _fmt_time(dt: datetime | None) -> str:
-    return dt.strftime("%Y-%m-%d %H:%M") if dt else ""
+    # Timestamps are stored as timestamptz (absolute UTC instants). asyncpg may
+    # hand them back tied to the DB session's zone, so normalise to UTC and label
+    # it explicitly — otherwise admins read the value as their local wall-clock
+    # and it looks an hour (or more) "off".
+    if not dt:
+        return ""
+    if dt.tzinfo is not None:
+        dt = dt.astimezone(timezone.utc)
+    return dt.strftime("%Y-%m-%d %H:%M") + " UTC"
+
+
+# Friendly labels for the structured (non-prose) user inputs that the widget
+# turns into a click rather than typed text.
+_GATE_CHOICE_LABELS = {"yes": "Yes", "no": "No", "info_only": "Just browsing"}
 
 
 def _msg_text(content: Any) -> str:
@@ -244,6 +257,11 @@ def _msg_text(content: Any) -> str:
             v = content.get(key)
             if isinstance(v, str) and v.strip():
                 return v
+        # Structured user turns: render the human-meaningful choice, not raw JSON.
+        if "gate_choice" in content:
+            return _GATE_CHOICE_LABELS.get(content["gate_choice"], str(content["gate_choice"]))
+        if "picked_problem_id" in content:
+            return "Selected a suggested issue"
         return json.dumps(content, ensure_ascii=False)
     return str(content) if content is not None else ""
 
@@ -340,15 +358,22 @@ async def conversation_detail(
     for m in msgs:
         if m.role == "system":
             continue
-        if isinstance(m.content, dict) and m.content.get("kind") in _HIDDEN_MESSAGE_KINDS:
+        content = m.content if isinstance(m.content, dict) else {}
+        if content.get("kind") in _HIDDEN_MESSAGE_KINDS:
             continue
         is_ai = m.role in ("assistant", "bot", "ai")
-        out_messages.append({
-            "from": "ai" if is_ai else "user",
-            "text": _msg_text(m.content),
+        entry: dict[str, Any] = {"from": "ai" if is_ai else "user"}
+        # Cards are structured widgets ({kind, payload}); hand them to the SPA
+        # whole so it can render them the way the chat widget does for clients,
+        # instead of flattening them to a raw JSON blob.
+        if m.content_type == "card" or ("kind" in content and "payload" in content):
+            entry["card"] = content
+            entry["text"] = ""
+        else:
+            entry["text"] = _msg_text(m.content)
             # Confidence isn't modelled yet; null → SPA omits the line.
-            "confidence": (m.content.get("confidence") if isinstance(m.content, dict) else None),
-        })
+            entry["confidence"] = content.get("confidence")
+        out_messages.append(entry)
     brief["messages"] = out_messages
     return brief
 
