@@ -3985,8 +3985,12 @@ root.addEventListener("click", (event) => {
     return;
   }
 
+  // A row carries data-conversation to open it. The status <select> also carries
+  // data-conversation (so its change handler knows which one), so exclude clicks
+  // on any actionable control — otherwise opening the dropdown would re-render
+  // and snap it shut.
   const conversationRow = event.target.closest("[data-conversation]");
-  if (conversationRow) {
+  if (conversationRow && !event.target.closest("[data-action]")) {
     const id = conversationRow.dataset.conversation;
     setState({ selectedConversationId: id });
     loadConversationDetail(id);
