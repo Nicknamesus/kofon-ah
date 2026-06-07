@@ -602,6 +602,12 @@ function _analyticsReportHtml() {
     -webkit-print-color-adjust: exact; print-color-adjust: exact;
   }
   .wrap { max-width: 820px; margin: 0 auto; padding: 28px; }
+  .toolbar { position: sticky; top: 0; z-index: 5; display: flex; gap: 10px; justify-content: flex-end;
+    background: #fff; padding: 12px 0; margin-bottom: 6px; border-bottom: 1px solid #e7edf5; }
+  .toolbar button { font: inherit; font-weight: 700; cursor: pointer; border-radius: 8px;
+    padding: 9px 16px; border: 1px solid #132178; }
+  .toolbar .primary { background: #132178; color: #fff; }
+  .toolbar .ghost { background: #fff; color: #132178; }
   .report-header { display: flex; justify-content: space-between; align-items: flex-end;
     border-bottom: 3px solid #132178; padding-bottom: 14px; margin-bottom: 22px; }
   .report-header h1 { margin: 0 0 4px; font-size: 24px; color: #0d213c; }
@@ -610,14 +616,18 @@ function _analyticsReportHtml() {
   .brand strong { font-size: 18px; color: #132178; letter-spacing: 0.04em; }
   .brand small { display: block; color: #8aa0bd; font-size: 11px; }
   h2.section { font-size: 15px; color: #0d213c; margin: 26px 0 12px;
-    padding-bottom: 6px; border-bottom: 1px solid #e7edf5; }
-  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    padding-bottom: 6px; border-bottom: 1px solid #e7edf5;
+    break-after: avoid; page-break-after: avoid; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    break-inside: avoid; page-break-inside: avoid; }
   .kpi { border: 1px solid #e7edf5; border-radius: 10px; padding: 12px; background: #fbfdff; }
   .kpi-label { display: block; color: #5a6b85; font-size: 11px; }
   .kpi-value { display: block; font-size: 22px; font-weight: 800; color: #0f2745; margin: 4px 0; }
   .kpi-sub { display: block; color: #8aa0bd; font-size: 11px; }
   .card { border: 1px solid #e7edf5; border-radius: 12px; padding: 16px; margin-bottom: 16px;
-    page-break-inside: avoid; }
+    break-inside: avoid; page-break-inside: avoid; }
+  /* Keep each heading glued to the chart/grid that follows it. */
+  .section-block { break-inside: avoid; page-break-inside: avoid; }
   .card h3 { margin: 0 0 2px; font-size: 14px; color: #0d213c; }
   .card p.cap { margin: 0 0 10px; color: #8aa0bd; font-size: 11px; }
   .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: center; }
@@ -633,8 +643,13 @@ function _analyticsReportHtml() {
   .footer { margin-top: 26px; padding-top: 10px; border-top: 1px solid #e7edf5;
     color: #8aa0bd; font-size: 11px; text-align: center; }
   @page { margin: 16mm; }
+  @media print { .toolbar { display: none !important; } .wrap { padding: 0; } }
 </style></head>
 <body><div class="wrap">
+  <div class="toolbar">
+    <button type="button" id="rpt-print" class="primary">${msg("Save as PDF", "保存为 PDF")}</button>
+    <button type="button" id="rpt-close" class="ghost">${msg("Close", "关闭")}</button>
+  </div>
   <div class="report-header">
     <div>
       <h1>Analytics Report</h1>
@@ -643,12 +658,17 @@ function _analyticsReportHtml() {
     <div class="brand"><strong>KOFON</strong><small>AI Agent Console</small><small>Generated ${escapeHtml(generated)}</small></div>
   </div>
 
-  <h2 class="section">Key results (last 30 days)</h2>
-  <div class="kpi-grid">${kpi(analytics.valueCards)}</div>
+  <div class="section-block">
+    <h2 class="section">Key results (last 30 days)</h2>
+    <div class="kpi-grid">${kpi(analytics.valueCards)}</div>
+  </div>
 
-  <h2 class="section">Operational overview</h2>
-  <div class="kpi-grid">${kpi(metrics)}</div>
+  <div class="section-block">
+    <h2 class="section">Operational overview</h2>
+    <div class="kpi-grid">${kpi(metrics)}</div>
+  </div>
 
+  <div class="section-block">
   <h2 class="section">AI resolve rate</h2>
   <div class="card">
     <h3>Resolved conversations over the last 30 days</h3>
@@ -666,7 +686,9 @@ function _analyticsReportHtml() {
       <div><b>${trendChange >= 0 ? "+" : ""}${trendChange} pts</b><span>30-day change</span></div>
     </div>
   </div>
+  </div>
 
+  <div class="section-block">
   <h2 class="section">Product consultation ranking</h2>
   <div class="card">
     <h3>Which KOFON lines are driving demand</h3>
@@ -678,7 +700,9 @@ function _analyticsReportHtml() {
       <tfoot><tr><td>Total</td><td class="num">${pcTotal}</td><td class="num">100%</td></tr></tfoot>
     </table>
   </div>
+  </div>
 
+  <div class="section-block">
   <h2 class="section">High frequency questions</h2>
   <div class="card">
     <h3>Used for FAQ and knowledge base improvement</h3>
@@ -689,6 +713,7 @@ function _analyticsReportHtml() {
       <tbody>${tableRows(qf, qfTotal)}</tbody>
       <tfoot><tr><td>Total</td><td class="num">${qfTotal}</td><td class="num">100%</td></tr></tfoot>
     </table>
+  </div>
   </div>
 
   <div class="footer">KOFON AI Agent Console · Analytics Report · ${escapeHtml(generated)}</div>
@@ -704,17 +729,17 @@ function exportAnalyticsReport() {
   win.document.open();
   win.document.write(_analyticsReportHtml());
   win.document.close();
-  // Print once the report window has laid out. The guard prevents the onload
-  // and timeout fallback from both firing the dialog.
-  let printed = false;
-  const print = () => {
-    if (printed) return;
-    printed = true;
-    win.focus();
-    win.print();
+  // Wire the in-report toolbar so the user can save/print on demand — this is
+  // the reliable "download" path (browser print dialog → Save as PDF).
+  const wire = () => {
+    const printBtn = win.document.getElementById("rpt-print");
+    const closeBtn = win.document.getElementById("rpt-close");
+    if (printBtn) printBtn.onclick = () => { win.focus(); win.print(); };
+    if (closeBtn) closeBtn.onclick = () => win.close();
   };
-  win.onload = print;
-  setTimeout(print, 600);
+  win.onload = wire;
+  setTimeout(wire, 300);
+  showToast(msg("Report opened — click “Save as PDF” to download.", "报告已打开——点击“保存为 PDF”即可下载。"));
 }
 
 // Admin-user data for the User Permissions section.
