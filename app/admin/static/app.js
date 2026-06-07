@@ -335,11 +335,16 @@ const answerReviews = [
 // to the customer's widget + agent-handoff state the backend doesn't have yet
 // (see the in-page banner). So each session carries its own self-contained demo
 // transcript, context, and canned reply — nothing here reads live conversations.
+// `takenOver: true` = a human is already in control (Take Over button disabled,
+// transcript already shows a human/admin reply). The pressable ones are still
+// AI-handled — pressing Take Over "sends" the draft reply as the first human
+// message and locks the AI out.
 const takeoverSessions = [
   {
     id: "take-001", name: "Liu Wei", company: "Wuhan Smart Logistics Co.",
     product: "AGV Products", wait: "06:21", status: "Waiting", priority: "High",
     intent: "High purchase intent", state: "Need technical confirmation",
+    takenOver: false,
     messages: [
       { from: "user", text: "We're building a new AGV line and need drive motors. Can you recommend something?" },
       { from: "ai", text: "Happy to help. Could you share the payload, top speed, and wheel diameter so I can match a motor?" },
@@ -351,26 +356,42 @@ const takeoverSessions = [
   },
   {
     id: "take-002", name: "Zhang Min", company: "Hefei Laser Equipment",
-    product: "KH Series Reducer", wait: "12:04", status: "Engineer needed", priority: "High",
+    product: "KH Series Reducer", wait: "12:04", status: "Engineer joined", priority: "High",
     intent: "Technical evaluation", state: "Awaiting backlash spec",
+    takenOver: true,
     messages: [
       { from: "user", text: "Does the KH series hold under 1 arcmin backlash after 2000 hours?" },
       { from: "ai", text: "The KH series is rated at ≤1 arcmin, but lifetime backlash depends on load profile. Let me get an engineer to confirm for your case." },
       { from: "user", text: "Yes please, this is for a laser cutting head so it's critical." },
+      { from: "admin", text: "Hi Zhang Min, this is Chen from KOFON engineering. Could you send the cutting head's load cycle and mounting orientation?" },
     ],
-    reply: "Can you send the cutting head's load cycle and mounting orientation?",
+    reply: "",
     note: "Laser cutting application — precision critical. Confirm lifetime backlash under their duty cycle before quoting KH090.",
   },
   {
     id: "take-003", name: "Elena Rossi", company: "EuroMotion S.r.l.",
     product: "Harmonic Reducer", wait: "03:48", status: "Sales needed", priority: "Medium",
     intent: "Quotation request", state: "Pricing + lead time",
+    takenOver: false,
     messages: [
       { from: "user", text: "I need a quote for 50 units of harmonic reducers, ratio 100:1, delivered to Italy." },
       { from: "ai", text: "I can route this to our sales team for export pricing and lead time. Connecting you now." },
     ],
     reply: "I'll prepare an export quote for 50× ratio 100:1 — confirming lead time for Italy.",
     note: "Export order, 50 units, ratio 100:1, ship to Italy. Hand to sales for pricing + Incoterms.",
+  },
+  {
+    id: "take-004", name: "Wang Fang", company: "Shenzhen Precision Motion",
+    product: "Servo Electric Cylinder", wait: "08:55", status: "Sales joined", priority: "Medium",
+    intent: "Repeat customer", state: "Confirming stroke length",
+    takenOver: true,
+    messages: [
+      { from: "user", text: "Looking to reorder the servo electric cylinders, but I need a longer stroke this time." },
+      { from: "ai", text: "I can pull up your previous order and our stroke options. Let me connect you with sales to confirm availability." },
+      { from: "admin", text: "Hi Wang Fang, glad to have you back — what stroke length do you need, and is the mounting the same as last order?" },
+    ],
+    reply: "",
+    note: "Repeat customer (3rd order). Pull prior config, confirm new stroke length and mounting before quoting.",
   },
 ];
 
@@ -404,6 +425,7 @@ const state = {
   selectedConversationId: conversations[0] ? conversations[0].id : null,
   conversationSearch: "",
   conversationStatus: "All",
+  conversationAccount: "All",
   productSearch: "",
   productFamily: null,
   productModal: false,
@@ -635,7 +657,8 @@ async function loadConversations() {
   try {
     const params = new URLSearchParams({
       q: state.conversationSearch || "",
-      status_filter: state.conversationStatus || "All"
+      status_filter: state.conversationStatus || "All",
+      account_filter: state.conversationAccount || "All"
     });
     const res = await api("/admin/api/conversations?" + params.toString());
     if (!res.ok) return;
@@ -703,7 +726,8 @@ async function refreshConversations() {
   try {
     const params = new URLSearchParams({
       q: state.conversationSearch || "",
-      status_filter: state.conversationStatus || "All"
+      status_filter: state.conversationStatus || "All",
+      account_filter: state.conversationAccount || "All"
     });
     const res = await api("/admin/api/conversations?" + params.toString());
     if (!res.ok) return;
@@ -1992,7 +2016,10 @@ function userConversationsPage() {
         String(value || "").toLowerCase().includes(query)
       );
     const matchesStatus = state.conversationStatus === "All" || item.status === state.conversationStatus;
-    return matchesQuery && matchesStatus;
+    const matchesAccount =
+      state.conversationAccount === "All" ||
+      (state.conversationAccount === "Account" ? !!item.account : !item.account);
+    return matchesQuery && matchesStatus && matchesAccount;
   });
   const selected = conversations.find((item) => item.id === state.selectedConversationId) || filtered[0] || conversations[0];
 
@@ -2075,6 +2102,15 @@ function userConversationsPage() {
           <select data-field="conversation-status">
             ${["All", "Resolved", "Needs takeover", "Lead created", "Unresolved"]
               .map((status) => `<option ${state.conversationStatus === status ? "selected" : ""}>${status}</option>`)
+              .join("")}
+          </select>
+          <select data-field="conversation-account">
+            ${[
+              ["All", msg("All users", "全部用户")],
+              ["Account", msg("Account users", "注册用户")],
+              ["Anonymous", msg("Anonymous", "匿名用户")]
+            ]
+              .map(([value, label]) => `<option value="${value}" ${state.conversationAccount === value ? "selected" : ""}>${escapeHtml(label)}</option>`)
               .join("")}
           </select>
           <button class="primary-button" data-action="apply-conversation-filter">Filter</button>
@@ -2684,7 +2720,12 @@ function manualTakeoverPage() {
             <h2>${escapeHtml(active.name)}</h2>
             <p>${escapeHtml(active.company)} · ${escapeHtml(active.product)}</p>
           </div>
-          ${pill("Human taking over")}
+          <div class="takeover-controls">
+            ${active.takenOver ? pill("Human in control", "human-on") : pill("AI handling", "ai-on")}
+            <button class="primary-button" data-action="take-over" data-session="${escapeHtml(active.id)}" ${active.takenOver ? "disabled" : ""}>
+              ${active.takenOver ? msg("Taken over", "已接管") : msg("Take Over", "接管")}
+            </button>
+          </div>
         </div>
         <div class="chat-stream takeover">
           ${messages
@@ -2703,8 +2744,9 @@ function manualTakeoverPage() {
             .join("")}
         </div>
         <div class="reply-box">
-          <input value="${escapeHtml(active.reply || "")}" />
-          <button class="primary-button" data-action="send-reply">Send</button>
+          <input value="${escapeHtml(active.reply || "")}" ${active.takenOver ? "" : "disabled"}
+                 placeholder="${active.takenOver ? msg("Type a reply…", "输入回复…") : msg("Take over the conversation to reply", "接管对话后即可回复")}" />
+          <button class="primary-button" data-action="send-reply" ${active.takenOver ? "" : "disabled"}>${msg("Send", "发送")}</button>
         </div>
       </article>
       <aside class="panel user-context">
@@ -3280,6 +3322,20 @@ root.addEventListener("click", (event) => {
     }
     return;
   }
+  if (action === "take-over") {
+    const session = takeoverSessions.find((s) => s.id === actionButton.dataset.session);
+    if (session && !session.takenOver) {
+      session.takenOver = true;
+      // "Send" the drafted reply as the human's first message, then clear it.
+      const draft = (session.reply || "").trim();
+      if (draft) session.messages = (session.messages || []).concat([{ from: "admin", text: draft }]);
+      session.reply = "";
+      session.status = "Human joined";
+      render();
+      showToast(msg("You've taken over — the AI is paused for this chat.", "您已接管 — 该对话的 AI 已暂停。"));
+    }
+    return;
+  }
   if (action === "set-chart-view") {
     const id = actionButton.dataset.chart;
     const view = actionButton.dataset.view;
@@ -3321,7 +3377,8 @@ root.addEventListener("click", (event) => {
   if (action === "apply-conversation-filter") {
     const search = root.querySelector('[data-field="conversation-search"]')?.value || "";
     const status = root.querySelector('[data-field="conversation-status"]')?.value || "All";
-    setState({ conversationSearch: search, conversationStatus: status });
+    const account = root.querySelector('[data-field="conversation-account"]')?.value || "All";
+    setState({ conversationSearch: search, conversationStatus: status, conversationAccount: account });
     loadConversations();
     return;
   }
@@ -3410,6 +3467,20 @@ root.addEventListener("click", (event) => {
     return;
   }
 
+  // Human reply in the takeover mockup: append it to the active transcript as an
+  // admin message so the bot/human separation is visible.
+  if (action === "send-reply") {
+    const session = activeTakeover();
+    const input = actionButton.closest(".reply-box")?.querySelector("input");
+    const text = (input?.value || "").trim();
+    if (session && session.takenOver && text) {
+      session.messages = (session.messages || []).concat([{ from: "admin", text }]);
+      session.reply = "";
+      render();
+    }
+    return;
+  }
+
   const actionMessages = {
     "add-knowledge": ["Candidate knowledge item added to review draft.", "候选知识已加入审核草稿。"],
     "test-retrieval": ["Knowledge retrieval test completed.", "知识检索测试已完成。"],
@@ -3419,7 +3490,6 @@ root.addEventListener("click", (event) => {
     "review-test": ["New answer test generated.", "新回答测试已生成。"],
     "review-knowledge": ["Corrected answer prepared for knowledge base.", "修正答案已准备加入知识库。"],
     "review-resolve": ["Review item marked resolved.", "审核项已标记为解决。"],
-    "send-reply": ["Manual reply sent in prototype.", "人工回复已在原型中发送。"],
     "save-note": ["Internal note saved.", "内部备注已保存。"]
   };
 

@@ -1224,7 +1224,7 @@ tr[data-conversation] {
 
 .filter-bar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 170px auto;
+  grid-template-columns: minmax(0, 1fr) 170px 170px auto;
   gap: 10px;
   margin-bottom: 14px;
 }
@@ -1232,6 +1232,38 @@ tr[data-conversation] {
 .chat-panel,
 .takeover-chat {
   min-height: 680px;
+}
+
+/* Manual Takeover: AI-vs-human state + the Take Over control in the chat header. */
+.takeover-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+
+.pill.ai-on {
+  color: var(--blue-2);
+  background: #e7f0ff;
+}
+
+.pill.human-on {
+  color: var(--green);
+  background: var(--green-bg);
+}
+
+.primary-button:disabled,
+.secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+  box-shadow: none;
+}
+
+.reply-box input:disabled {
+  background: #f1f4f8;
+  color: var(--muted);
+  cursor: not-allowed;
 }
 
 .chat-header h2 {

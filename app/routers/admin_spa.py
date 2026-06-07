@@ -289,6 +289,7 @@ def _convo_brief(row: Conversation, first_user_text: str | None) -> dict[str, An
         "product": row.main_type_code or "—",
         "time": _fmt_time(row.last_message_at),
         "status": _convo_status(row),
+        "account": bool(row.user_email),  # signed-in user vs anonymous widget visitor
         "intent": None,   # not modelled yet; rendered gracefully by the SPA
         "score": None,
         "summary": _convo_summary(first_user_text, row),
@@ -300,6 +301,7 @@ async def conversations_list(
     ctx: AdminContext = Depends(require_admin),
     q: str = "",
     status_filter: str = "All",
+    account_filter: str = "All",
     limit: int = 100,
 ) -> dict[str, Any]:
     _require(ctx, "conversations.read")
@@ -339,6 +341,10 @@ async def conversations_list(
         ]
     if status_filter and status_filter != "All":
         items = [it for it in items if it["status"] == status_filter]
+    if account_filter == "Account":
+        items = [it for it in items if it["account"]]
+    elif account_filter == "Anonymous":
+        items = [it for it in items if not it["account"]]
     return {"conversations": items}
 
 
