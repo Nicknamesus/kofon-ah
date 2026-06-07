@@ -533,9 +533,10 @@ function _hexRgb(hex) {
 
 // Tiny page builder: top-origin coordinates, converted to PDF's bottom-origin
 // space on emit. Accumulates a content stream per page.
-function _createPdf() {
+function _createPdf(title) {
   const PW = 595.28, PH = 841.89, M = 42;
   const contentW = PW - 2 * M;
+  const docTitle = title || "Report";
   const pages = [];
   let s = "";
   let y = M;
@@ -616,7 +617,7 @@ function _createPdf() {
         let f = body;
         const [r, g, b] = _hexRgb("#8aa0bd");
         f += `0.5 w ${fmt(r)} ${fmt(g)} ${fmt(b)} RG ${fmt(M)} ${fmt(ty(PH - M + 14))} m ${fmt(PW - M)} ${fmt(ty(PH - M + 14))} l S\n`;
-        const note = "KOFON AI Agent Console - Analytics Report";
+        const note = "KOFON AI Agent Console - " + docTitle;
         f += `BT /F1 8 Tf ${fmt(r)} ${fmt(g)} ${fmt(b)} rg ${fmt(M)} ${fmt(ty(PH - M + 26))} Td (${_pdfStr(note)}) Tj ET\n`;
         const pg = `Page ${i + 1} / ${p}`;
         f += `BT /F1 8 Tf ${fmt(r)} ${fmt(g)} ${fmt(b)} rg ${fmt(PW - M - _pdfTextWidth(pg, 8, false))} ${fmt(ty(PH - M + 26))} Td (${_pdfStr(pg)}) Tj ET\n`;
@@ -654,7 +655,7 @@ function _createPdf() {
 }
 
 function _analyticsPdf() {
-  const doc = _createPdf();
+  const doc = _createPdf("Analytics Report");
   const M = doc.M, CW = doc.contentW, right = M + CW;
   const pc = analytics.productConsults;
   const qf = analytics.questionFrequency;
@@ -819,6 +820,213 @@ function exportAnalyticsReport() {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 0);
   showToast(msg("Analytics report downloaded.", "分析报告已下载。"));
+}
+
+
+// ---- daily brief PDF -----------------------------------------------------
+// A one-document, whole-console snapshot: today's KPIs plus a section per admin
+// area (conversations, AI quality, demand, sales, content, catalog, team,
+// agent config, recent operations). Reuses the same vector PDF builder.
+function _dailyBriefPdf() {
+  const doc = _createPdf("Daily Brief");
+  const M = doc.M, CW = doc.contentW, right = M + CW;
+
+  function heading(txt) {
+    doc.ensure(70);
+    doc.text(M, doc.y, txt, 13, true, "#0d213c");
+    doc.y += 16;
+    doc.line(M, doc.y, right, doc.y, "#e7edf5", 1);
+    doc.y += 12;
+  }
+  function note(txt) { doc.text(M, doc.y, txt, 9, false, "#8aa0bd"); doc.y += 14; }
+  function kpiGrid(cards) {
+    const cols = 4, gap = 12, cardW = (CW - gap * (cols - 1)) / cols, cardH = 62;
+    cards.forEach((c, i) => {
+      const col = i % cols;
+      if (col === 0) doc.ensure(cardH + 4);
+      const x = M + col * (cardW + gap), top = doc.y;
+      doc.roundRectFill(x, top, cardW, cardH, 8, "#fbfdff");
+      doc.roundRectStroke(x, top, cardW, cardH, 8, "#e7edf5", 1);
+      doc.text(x + 11, top + 11, c.label, 8, false, "#5a6b85");
+      doc.text(x + 11, top + 24, String(c.value), 16, true, "#0f2745");
+      const sub = [c.delta, c.sub].filter(Boolean).join(" - ");
+      if (sub) doc.text(x + 11, top + 47, sub, 8, false, "#8aa0bd");
+      if (col === cols - 1 || i === cards.length - 1) doc.y = top + cardH + gap;
+    });
+  }
+  function bars(items, total, hex) {
+    const rowH = 24, labelW = 150, valW = 70, barMax = CW - labelW - valW;
+    const max = Math.max(...items.map((i) => i.value), 1);
+    const tot = total || items.reduce((a, i) => a + i.value, 0) || 1;
+    doc.ensure(items.length * rowH + 4);
+    items.forEach((it) => {
+      const top = doc.y, cy = top + rowH / 2;
+      const w = Math.max(3, (it.value / max) * barMax);
+      doc.text(M + labelW - 8, cy - 4, it.label, 9, false, "#33425c", "right");
+      doc.roundRectFill(M + labelW, cy - 5, barMax, 11, 5.5, "#eef2f8");
+      doc.roundRectFill(M + labelW, cy - 5, w, 11, 5.5, hex);
+      doc.text(M + labelW + w + 8, cy - 4, `${it.value} (${((it.value / tot) * 100).toFixed(1)}%)`, 9, true, "#1f2d44");
+      doc.y = top + rowH;
+    });
+    doc.y += 6;
+  }
+  function lineChart(values, x0, w, top, h) {
+    const padL = 30, padB = 18, plotW = w - padL, plotH = h - padB;
+    const max = Math.max(...values, 0) || 1;
+    const xAt = (i) => x0 + padL + (i * plotW) / (values.length - 1);
+    const yAt = (v) => top + plotH - (v / max) * plotH;
+    [0, max / 2, max].forEach((t) => {
+      const yy = top + plotH - (t / max) * plotH;
+      doc.line(x0 + padL, yy, x0 + w, yy, "#e7edf5", 0.6);
+      doc.text(x0 + padL - 6, yy - 4, String(Math.round(t)), 8, false, "#8aa0bd", "right");
+    });
+    ["30d ago", "20d ago", "10d ago", "Today"].forEach((lab, i, arr) => {
+      const x = x0 + padL + (i / (arr.length - 1)) * plotW;
+      doc.text(x, top + plotH + 4, lab, 8, false, "#8aa0bd", i === 0 ? "left" : i === arr.length - 1 ? "right" : "center");
+    });
+    const pts = values.map((v, i) => [xAt(i), yAt(v)]);
+    doc.fillPoly(pts.concat([[xAt(values.length - 1), top + plotH], [xAt(0), top + plotH]]), "#e8f3ff");
+    doc.strokePoly(pts, "#1d8cff", 2, false);
+    values.forEach((v, i) => doc.roundRectFill(xAt(i) - 2, yAt(v) - 2, 4, 4, 2, "#1d8cff"));
+  }
+  function fit(str, maxW) {
+    str = String(str);
+    if (_pdfTextWidth(str, 9, false) <= maxW) return str;
+    while (str.length > 1 && _pdfTextWidth(str + "...", 9, false) > maxW) str = str.slice(0, -1);
+    return str + "...";
+  }
+  function table(headers, rows, fracs) {
+    const rowH = 18, xs = []; let acc = 0;
+    fracs.forEach((f) => { xs.push(M + acc * CW); acc += f; });
+    const colW = fracs.map((f) => f * CW);
+    doc.ensure(rowH * 2 + 4);
+    let top = doc.y;
+    doc.roundRectFill(M, top, CW, rowH, 4, "#f7faff");
+    headers.forEach((h, i) => doc.text(xs[i] + 6, top + 5, h, 9, true, "#5a6b85"));
+    top += rowH;
+    rows.forEach((r) => {
+      if (top > doc.PH - doc.M - rowH) { doc.y = top; doc.pushPage(); top = doc.y; }
+      r.forEach((cell, i) => doc.text(xs[i] + 6, top + 4, fit(cell, colW[i] - 12), 9, false, "#1f2d44"));
+      doc.line(M, top + rowH, M + CW, top + rowH, "#eef2f8", 0.6);
+      top += rowH;
+    });
+    doc.y = top + 8;
+  }
+  const cnt = (arr, fn) => arr.filter(fn).length;
+
+  // Header.
+  const today = new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  doc.text(M, doc.y, "Daily Brief", 20, true, "#0d213c");
+  doc.text(right, doc.y + 2, "KOFON", 14, true, "#132178", "right");
+  doc.y += 24;
+  doc.text(M, doc.y, today, 9, false, "#5a6b85");
+  doc.text(right, doc.y, "Generated " + new Date().toLocaleString(), 8, false, "#8aa0bd", "right");
+  doc.y += 14;
+  doc.line(M, doc.y, right, doc.y, "#132178", 2);
+  doc.y += 18;
+
+  // Today at a glance.
+  heading("Today at a glance");
+  kpiGrid(metrics);
+
+  // Conversations.
+  heading("Conversations");
+  const convStatuses = ["Resolved", "Lead created", "Needs takeover", "Unresolved"];
+  const convItems = convStatuses.map((st) => ({ label: st, value: cnt(conversations, (c) => c.status === st) }));
+  note(`${conversations.length} conversations in view - status breakdown`);
+  bars(convItems, conversations.length, "#1d8cff");
+
+  // AI quality.
+  heading("AI quality");
+  const resolveCard = analytics.valueCards.find((c) => /resolution/i.test(c.label));
+  const resolvePct = resolveCard ? parseFloat(resolveCard.value) : Math.max(...responseTrend);
+  doc.ensure(176);
+  const bt = doc.y;
+  doc.donut(M + 64, bt + 62, 50, 15, resolvePct, "#1d8cff", "#eef2f8");
+  doc.text(M + 64, bt + 54, resolvePct + "%", 18, true, "#0f2745", "center");
+  doc.text(M + 64, bt + 130, "AI resolution rate", 8, false, "#5a6b85", "center");
+  lineChart(responseTrend, M + 150, CW - 150, bt + 4, 138);
+  doc.y = bt + 150;
+  note(`${answerReviews.length} answers flagged for review`);
+
+  // Product demand + top questions.
+  heading("Product demand");
+  bars(analytics.productConsults, analytics.productConsults.reduce((a, i) => a + i.value, 0), "#1d8cff");
+  heading("High frequency questions");
+  bars(analytics.questionFrequency, analytics.questionFrequency.reduce((a, i) => a + i.value, 0), "#32c5ff");
+
+  // Sales pipeline.
+  heading("Sales pipeline");
+  kpiGrid([
+    { label: "Open leads", value: leads.length },
+    { label: "A-level leads", value: cnt(leads, (l) => l.level === "A") },
+    { label: "Customers", value: customers.length },
+    { label: "Unassigned", value: cnt(leads, (l) => /unassigned/i.test(l.owner)) },
+  ]);
+  table(
+    ["Customer", "Company", "Product", "Lvl", "Owner"],
+    leads.map((l) => [l.customer, l.company, l.product, l.level, l.owner]),
+    [0.22, 0.27, 0.26, 0.07, 0.18]
+  );
+
+  // Knowledge, content & catalog.
+  heading("Knowledge & content");
+  kpiGrid([
+    { label: "Documents", value: `${cnt(documents, (d) => d.status === "Enabled")}/${documents.length}`, sub: "enabled" },
+    { label: "FAQs", value: `${cnt(faqs, (f) => f.enabled)}/${faqs.length}`, sub: "enabled" },
+    { label: "Products", value: `${cnt(products, (p) => p.status === "Active")}/${products.length}`, sub: "active" },
+    { label: "Reviews open", value: answerReviews.length, sub: "answer review" },
+  ]);
+  const prodStatus = ["Active", "Draft", "Disabled"].map((st) => ({ label: st, value: cnt(products, (p) => p.status === st) }));
+  bars(prodStatus, products.length, "#16b8a6");
+
+  // Team & access.
+  heading("Team & access");
+  if (adminUsers.length) {
+    const roles = {};
+    adminUsers.forEach((u) => { roles[u.role] = (roles[u.role] || 0) + 1; });
+    bars(Object.keys(roles).map((r) => ({ label: r, value: roles[r] })), adminUsers.length, "#7c5cff");
+  } else {
+    note("Administrator list not loaded — open User Permissions to include it.");
+  }
+
+  // Agent configuration.
+  heading("Agent configuration");
+  doc.text(M, doc.y, "Agent name: " + agentSettings.agent_name, 10, false, "#1f2d44"); doc.y += 16;
+  doc.text(M, doc.y, "Languages: " + (agentSettings.enabled_languages || []).join(", "), 10, false, "#1f2d44"); doc.y += 16;
+  doc.text(M, doc.y, "Auto-create lead: " + (agentSettings.auto_create_lead ? "On" : "Off") +
+    "      Confidence threshold: " + (agentSettings.require_confidence_threshold ? "On" : "Off"), 10, false, "#1f2d44");
+  doc.y += 20;
+
+  // Recent operations.
+  heading("Recent operations");
+  if (logs.length) {
+    table(
+      ["Time", "Actor", "Action", "Target"],
+      logs.slice(0, 8).map((l) => [l.time, l.actor, l.action, l.target]),
+      [0.24, 0.22, 0.3, 0.24]
+    );
+  } else {
+    note("No operation log entries available.");
+  }
+
+  return doc.finish();
+}
+
+function exportDailyBrief() {
+  const pdf = _dailyBriefPdf();
+  const bytes = new Uint8Array(pdf.length);
+  for (let i = 0; i < pdf.length; i++) bytes[i] = pdf.charCodeAt(i) & 0xff;
+  const blob = new Blob([bytes], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `kofon-daily-brief-${new Date().toISOString().slice(0, 10)}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+  showToast(msg("Daily brief downloaded.", "每日简报已下载。"));
 }
 
 // Admin-user data for the User Permissions section.
@@ -2140,7 +2348,7 @@ function dashboardPage() {
     ${pageHeader(
       "Dashboard",
       "Monitor AI conversation quality, product demand, unresolved risks, and sales value.",
-      `<button class="secondary-button" data-action="export-dashboard">Export Report</button><button class="primary-button">Daily Brief</button>`
+      `<button class="secondary-button" data-action="export-dashboard">Export Report</button><button class="primary-button" data-action="daily-brief">Daily Brief</button>`
     )}
     <section class="metric-grid">
       ${metrics.map(metricCard).join("")}
@@ -3863,6 +4071,10 @@ root.addEventListener("click", (event) => {
     metrics.forEach((m) => rows.push([m.label, m.value, m.delta || "", m.sub || ""]));
     downloadCsv("kofon-dashboard-report", rows);
     showToast(msg("Report exported.", "报告已导出。"));
+    return;
+  }
+  if (action === "daily-brief") {
+    exportDailyBrief();
     return;
   }
   if (action === "export-conversations") {
