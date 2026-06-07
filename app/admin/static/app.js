@@ -615,6 +615,7 @@ function saveAgentSettings(button) {
   const payload = {
     agent_name: (nameInput && nameInput.value.trim()) || agentSettings.agent_name,
     enabled_languages: AGENT_LANGUAGES.filter((l) =>
+      ALWAYS_ON_LANGUAGES.includes(l.code) ||
       switchIsOn("lang:" + l.code, agentSettings.enabled_languages.includes(l.code))
     ).map((l) => l.code),
     auto_create_lead: switchIsOn("ctl:Auto-create sales lead", agentSettings.auto_create_lead),
@@ -914,7 +915,6 @@ const zhText = {
   "Answer": "回答",
   "Save FAQ": "保存 FAQ",
   "Configure the product expert personality, answer style, transfer rules, and safety controls.": "配置产品专家人格、回答风格、转人工规则和安全控制。",
-  "Preview Agent": "预览智能体",
   "Save Settings": "保存设置",
   "KOFON Product Expert": "KOFON 产品专家",
   "Industrial transmission AI assistant for customer service, product consultation, and lead qualification.": "面向客服、产品咨询和线索识别的工业传动 AI 助手。",
@@ -1081,7 +1081,6 @@ const zhText = {
   "Others": "其他",
   "Languages": "语言",
   "Drop an image here or click to upload": "将图片拖放到此处或点击上传",
-  "PNG or JPG. The current avatar is shown on the left.": "支持 PNG 或 JPG。当前头像显示在左侧。",
   "English": "英语",
   "Chinese": "中文",
   "German": "德语",
@@ -1415,7 +1414,7 @@ function liveBadge() {
 // itself. Always rendered as a circle with a thin white outline (see the
 // `.kofon-logo` rule, which overrides the squared-industrial theme).
 function kofonLogo(extraClass = "") {
-  return `<img class="kofon-logo ${extraClass}" src="/agent-profilepic.jpeg" alt="KOFON AI Agent" />`;
+  return `<img class="kofon-logo ${extraClass}" src="${escapeHtml(agentAvatarSrc)}" alt="KOFON AI Agent" />`;
 }
 
 function progressBar(value) {
@@ -2372,8 +2371,7 @@ function faqManagementPage() {
   return `
     ${pageHeader(
       "FAQ Management",
-      "Create, edit, prioritize, and enable common product and service questions.",
-      `<button class="secondary-button" data-action="faq-new">Add FAQ</button>`
+      "Create, edit, prioritize, and enable common product and service questions."
     )}
     <section class="faq-layout">
       <article class="panel">
@@ -2432,7 +2430,7 @@ function aiSettingsPage() {
     ${pageHeader(
       "AI Agent Settings",
       "Configure the product expert personality, answer style, transfer rules, and safety controls.",
-      `<button class="secondary-button">Preview Agent</button><button class="primary-button" data-action="settings-save">Save Settings</button>`
+      `<button class="primary-button" data-action="settings-save">Save Settings</button>`
     )}
     <section class="settings-layout">
       <article class="panel">
@@ -2445,7 +2443,7 @@ function aiSettingsPage() {
         </div>
         <div class="form-grid compact">
           ${field("Agent Name", agentSettings.agent_name, "input", [], "agent-name")}
-          ${avatarField("/agent-profilepic.jpeg")}
+          ${avatarField(agentAvatarSrc)}
           ${languageToggleList()}
         </div>
       </article>
@@ -2485,6 +2483,13 @@ let agentSettings = {
   require_confidence_threshold: true
 };
 
+// The agent avatar shown across the console (settings hero, chat bubbles). An
+// upload replaces it with a data URL for the session; nothing is persisted yet.
+let agentAvatarSrc = "/agent-profilepic.jpeg";
+
+// English and Chinese are always active and cannot be turned off.
+const ALWAYS_ON_LANGUAGES = ["EN", "ZH"];
+
 function languageToggleList() {
   const enabled = agentSettings.enabled_languages || [];
   return `
@@ -2496,7 +2501,11 @@ function languageToggleList() {
             (lang) => `
               <div class="language-toggle-item">
                 <strong>${escapeHtml(lang.label)}</strong>
-                ${switchControl("lang:" + lang.code, enabled.includes(lang.code))}
+                ${
+                  ALWAYS_ON_LANGUAGES.includes(lang.code)
+                    ? `<span class="always-on-tag">${msg("Always on", "始终启用")}</span>`
+                    : switchControl("lang:" + lang.code, enabled.includes(lang.code))
+                }
               </div>
             `
           )
@@ -2514,7 +2523,7 @@ function avatarField(currentSrc) {
         <img class="avatar-preview" src="${escapeHtml(currentSrc)}" alt="Current avatar" />
         <div class="avatar-drop-copy">
           <strong>Drop an image here or click to upload</strong>
-          <small>PNG or JPG. The current avatar is shown on the left.</small>
+          <small>${msg("PNG or JPG, square image only. The current avatar is shown on the left.", "支持 PNG 或 JPG，仅限正方形图片。当前头像显示在左侧。")}</small>
         </div>
         <input type="file" accept="image/*" data-field="avatar-upload" hidden />
       </label>
@@ -3190,9 +3199,20 @@ root.addEventListener("change", (event) => {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      const preview = target.closest(".avatar-drop")?.querySelector(".avatar-preview");
-      if (preview) preview.src = reader.result;
-      showToast(msg("Avatar updated in preview.", "头像已在预览中更新。"));
+      // Enforce a square avatar: measure the decoded image before accepting it.
+      const probe = new Image();
+      probe.onload = () => {
+        if (probe.naturalWidth !== probe.naturalHeight) {
+          target.value = ""; // let the user re-pick the same file after cropping
+          showToast(msg("Avatar must be a square image.", "头像必须是正方形图片。"));
+          return;
+        }
+        agentAvatarSrc = reader.result;
+        render(); // updates the form preview and every kofonLogo() avatar at once
+        showToast(msg("Avatar updated.", "头像已更新。"));
+      };
+      probe.onerror = () => showToast(msg("Could not read image.", "无法读取图片。"));
+      probe.src = reader.result;
     };
     reader.readAsDataURL(file);
   }
