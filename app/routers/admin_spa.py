@@ -696,6 +696,7 @@ _ACTION_LABELS = {
     "content.delete": "Deleted content",
     "user.create": "Created admin user",
     "user.toggle": "Toggled admin user",
+    "user.delete": "Deleted admin user",
     "routing.update": "Updated routing rules",
     "backup.create": "Created backup",
     "conversation.set_status": "Set conversation status",

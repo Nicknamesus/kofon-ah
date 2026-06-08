@@ -1825,7 +1825,20 @@ const zhText = {
   "Knowledge indexing": "知识索引构建",
   "F Series Product Manual": "F 系列产品手册",
   "After-sales Policy 2026": "2026 售后政策",
+  "Wuhan Smart Logistics Co.": "武汉智慧物流有限公司",
   "Pending review": "待审核",
+  // backend audit action labels (app/routers/admin_spa.py _ACTION_LABELS)
+  "Created content": "创建内容",
+  "Updated content": "更新内容",
+  "Deleted content": "删除内容",
+  "Created admin user": "创建管理员",
+  "Toggled admin user": "切换管理员状态",
+  "Deleted admin user": "删除管理员",
+  "Updated routing rules": "更新路由规则",
+  "Created backup": "创建备份",
+  "Set conversation status": "设置对话状态",
+  "Updated agent settings": "更新智能体设置",
+  "Updated agent avatar": "更新智能体头像",
   // ---- roles + descriptions ----
   "superadmin": "超级管理员",
   "editor": "编辑",
@@ -1887,6 +1900,14 @@ function translateLooseText(text) {
   if (translated !== text) return translated;
 
   translated = text.replace(/^Source: (.+)$/u, (_, value) => `来源：${zhText[value] || value}`);
+  if (translated !== text) return translated;
+
+  // Operation Logs "Details" column (built in app/routers/admin_spa.py).
+  translated = text.replace(/^Added (.+)$/u, (_, value) => `新增 ${zhText[value] || value}`);
+  if (translated !== text) return translated;
+  translated = text.replace(/^Removed (.+)$/u, (_, value) => `移除 ${zhText[value] || value}`);
+  if (translated !== text) return translated;
+  translated = text.replace(/^role: (.+)$/u, (_, value) => `角色：${zhText[value] || value}`);
   if (translated !== text) return translated;
 
   translated = text.replace(/^(\d+) users$/u, "$1 位用户");
