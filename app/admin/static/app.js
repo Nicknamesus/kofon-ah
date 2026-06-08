@@ -474,6 +474,14 @@ function toCsv(rows) {
   return rows.map((row) => row.map(csvEscape).join(",")).join("\r\n");
 }
 
+// Translate an export cell to the active UI language so CSV downloads read the
+// same as the on-screen Chinese tables. Reuses the on-screen translation pass,
+// so free-form text with no mapping (company names, summaries) is left as-is.
+function csvCell(value) {
+  if (value == null) return "";
+  return state.lang === "zh" ? translateLooseText(String(value)) : value;
+}
+
 function downloadCsv(baseName, rows) {
   const stamp = new Date().toISOString().slice(0, 10);
   // Prepend a UTF-8 BOM so Excel renders Chinese (and other non-ASCII) correctly.
@@ -4161,8 +4169,8 @@ root.addEventListener("click", (event) => {
     return;
   }
   if (action === "export-dashboard") {
-    const rows = [["Metric", "Value", "Change", "Note"]];
-    metrics.forEach((m) => rows.push([m.label, m.value, m.delta || "", m.sub || ""]));
+    const rows = [[msg("Metric", "指标"), msg("Value", "数值"), msg("Change", "变化"), msg("Note", "备注")]];
+    metrics.forEach((m) => rows.push([csvCell(m.label), csvCell(m.value), csvCell(m.delta || ""), csvCell(m.sub || "")]));
     downloadCsv("kofon-dashboard-report", rows);
     showToast(msg("Report exported.", "报告已导出。"));
     return;
@@ -4172,9 +4180,9 @@ root.addEventListener("click", (event) => {
     return;
   }
   if (action === "export-conversations") {
-    const rows = [["ID", "User", "Company", "Product", "Time", "Status", "Summary"]];
+    const rows = [["ID", msg("User", "用户"), msg("Company", "公司"), msg("Product", "产品"), msg("Time", "时间"), msg("Status", "状态"), msg("Summary", "摘要")]];
     conversations.forEach((c) =>
-      rows.push([c.id, c.user, c.company, c.product, c.time, c.status, c.summary])
+      rows.push([c.id, csvCell(c.user), csvCell(c.company), csvCell(c.product), csvCell(c.time), csvCell(c.status), csvCell(c.summary)])
     );
     downloadCsv("kofon-conversations", rows);
     showToast(msg("Conversations exported.", "对话已导出。"));
@@ -4185,9 +4193,9 @@ root.addEventListener("click", (event) => {
     return;
   }
   if (action === "export-logs") {
-    const rows = [["Time", "Actor", "Action", "Target", "Details", "Result"]];
+    const rows = [[msg("Time", "时间"), msg("Actor", "操作者"), msg("Action", "操作"), msg("Target", "对象"), msg("Details", "详情"), msg("Result", "结果")]];
     logs.forEach((l) =>
-      rows.push([l.time, l.actor, l.action, l.target, l.details || "", l.result])
+      rows.push([csvCell(l.time), csvCell(l.actor), csvCell(l.action), csvCell(l.target), csvCell(l.details || ""), csvCell(l.result)])
     );
     downloadCsv("kofon-operation-logs", rows);
     showToast(msg("Logs exported.", "日志已导出。"));
