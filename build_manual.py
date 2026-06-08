@@ -1192,9 +1192,11 @@ KV([
      "**and** a CSRF token, then 303-redirects back (or re-renders the form with an error). Also "
      "hosts the notification SSE stream."],
     ["`app/routers/admin_spa.py`", "The **JSON API** the SPA fetches: `/me` (identity + "
-     "permissions + CSRF), dashboard counts, conversations list/detail, products, KB, leads, "
-     "users, audit, and agent-settings. Reads require `require_admin` plus the relevant "
-     "permission."],
+     "permissions + CSRF), dashboard counts, conversations list/detail (with search + status + "
+     "**account/anonymous** filters) and status updates, products, KB, leads, users, the "
+     "**audit feed** (humanized action labels + a change summary built from the stored diff), "
+     "agent-settings, and the **agent-avatar upload** (`POST /admin/api/agent-avatar`). Reads "
+     "require `require_admin` plus the relevant permission; writes also need CSRF."],
 ], headers=("Router", "Responsibility"))
 
 H2("The content-CRUD registry — “edit the DB without code”")
@@ -1218,8 +1220,11 @@ P(
     "Takeover, Product Management, Knowledge Base, FAQ Management, AI Agent Settings, Customers & "
     "Leads, Analytics, Answer Review, User Permissions, System Settings, and Operation Logs. Some "
     "are **live** (backed by an `admin_spa` endpoint); others are clearly marked **preview** "
-    "(sample data behind a banner) until their backend lands. Charts are hand-rolled SVG — a line "
-    "chart plus bar/pie views with a per-chart toggle, and the AI-resolution donut."
+    "(sample data behind a banner) or are functional **mockups** (e.g. Manual Takeover) until "
+    "their backend lands. Charts are hand-rolled SVG — a line chart plus bar/pie views with a "
+    "per-chart toggle, and the AI-resolution donut; bars are scaled so the leader fills the track "
+    "and each row shows its share plus a running total. See **Admin pages at a glance** below for "
+    "the per-page breakdown, and the later subsections on in-browser editing and exports."
 )
 P(
     "**Client-side i18n is its own system.** Every page renders in English, then a `localizeDom()` "
@@ -1270,7 +1275,18 @@ P(
     "The admin reads/writes it through `GET`/`PUT /admin/api/agent-settings` (the write needs "
     "`settings.write` + CSRF and is audit-logged). This is the cleanest example of the console "
     "reaching into the running agent — settings flow one way (admin → file → agent) with the file "
-    "as the single source of truth."
+    "as the single source of truth. English and Chinese are pinned **always-on** in the language "
+    "list (the others toggle), and `agent_name` now drives the widget's **greeting** as well as "
+    "its header, via `{name}` interpolation in `widget/i18n-extra.js`."
+)
+P(
+    "The same page sets the **agent avatar**. The chosen image is validated client-side (square "
+    "only), then posted to `POST /admin/api/agent-avatar`, which re-checks format and squareness "
+    "with a tiny dependency-free PNG/JPEG header parser (no Pillow) and overwrites the single "
+    "shared image `widget/agent-profilepic.jpeg`. Because the console **and** the customer widget "
+    "both render that one file, a new avatar appears everywhere — the widget picks it up on its "
+    "next load. This is the second place (after `agent_name`) where the console writes something "
+    "the live widget consumes."
 )
 
 H2("Backups and restart")
@@ -1280,6 +1296,74 @@ P(
     "timestamped `tar.gz` under `ADMIN_BACKUP_DIR`, listed and downloadable at `/admin/backups`. "
     "The restart endpoint is a stub returning 501 until a production supervisor is wired up — "
     "operators restart via `deploy.sh` for now."
+)
+
+H2("Admin pages at a glance")
+P(
+    "Each left-nav page and what currently backs it. **Live** = a real `admin_spa` endpoint; "
+    "**session** = functional in the browser but not yet persisted (resets on reload); "
+    "**preview/mockup** = sample data behind a banner until the backend lands."
+)
+KV([
+    ["Dashboard", "Live KPIs + the polling conversation feed. **Export Report** (CSV) and "
+     "**Daily Brief** (a whole-console PDF, see Exports)."],
+    ["User Conversations", "Live list/detail; change status; search + status + **account vs "
+     "anonymous** filters; **Batch Export** (CSV). With no signed-in users yet, the Account "
+     "filter is correctly empty."],
+    ["Manual Takeover", "**Mockup** — there is no live push channel to the widget, so each "
+     "session carries a self-contained demo transcript and the Take Over control only updates "
+     "local state."],
+    ["Product Management", "Live catalog (`/content/products`, ~hundreds of SKUs in 6+ "
+     "families). Products are **editable** in a modal; **Add Category** adds an (empty) family; "
+     "**Add Product** is intentionally disabled with an explanation (catalog is import-fed)."],
+    ["Knowledge Base", "Live document list (`/content/kb`); the **Enable/Disable** toggle works "
+     "(session); the upload zone is a stub."],
+    ["FAQ Management", "**Session** add / edit / delete (Edit + Delete columns; no enable "
+     "toggle); no backend yet."],
+    ["AI Agent Settings", "**Live** — writes `agent_settings.json` and overwrites the shared "
+     "avatar file. The one page that changes how the bot behaves."],
+    ["Customers & Leads", "**Preview** — needs real user accounts; shown behind a banner."],
+    ["Analytics", "Live metrics + charts. **Export Analytics** renders a multi-section PDF "
+     "report (see Exports)."],
+    ["Answer Review", "Read-only audit of risky answers; correct/incorrect marks are client-side."],
+    ["User Permissions", "**Live** — list admins, create/disable (via `admin_api`, CSRF-guarded). "
+     "Role cards summarize scope."],
+    ["System Settings", "**Preview** — integrations / security / retention are mock controls."],
+    ["Operation Logs", "**Live** audit feed with humanized actions and a per-row change summary."],
+], headers=("Page", "What it is today"))
+
+H2("In-browser editing (session-scoped)")
+P(
+    "Several catalog/content edits are wired as **functional previews**: they mutate the SPA's "
+    "in-memory state and re-render immediately, but have **no backend write yet**, so they reset "
+    "on reload. This covers FAQ add/edit/delete, product edits, newly-added product categories, "
+    "and the Knowledge Base Enable/Disable toggle. They exist so the UX is real ahead of the "
+    "endpoints. Contrast the genuinely **persisted** writes, which all go through a CSRF-guarded "
+    "endpoint and are audit-logged: agent settings, the agent avatar, admin users, and "
+    "conversation status. When adding a backend for one of the session-scoped features, replace "
+    "the local mutation with the same `api()` + CSRF pattern the persisted ones use."
+)
+
+H2("Client-side exports: CSV and PDF reports")
+P(
+    "Export buttons build their files **in the browser** — no server round-trip — which keeps "
+    "them working offline and avoids a print-dialog detour. CSV exports (Dashboard **Export "
+    "Report**, Conversations **Batch Export**, Operation Logs **Download CSV**) go through a small "
+    "`toCsv` / `downloadCsv` helper that prepends a UTF-8 BOM so Excel renders Chinese correctly."
+)
+P(
+    "The two **PDF** exports — the Analytics **Export Analytics** report and the Dashboard **Daily "
+    "Brief** — share a dependency-free vector PDF builder (`_createPdf` in `app.js`). It emits PDF "
+    "text/line/rect/arc primitives with the built-in Helvetica fonts to draw rounded KPI cards, a "
+    "resolution donut, an area trend line, and bar charts, then downloads the result as a Blob. "
+    "The whole file is kept **ASCII** so string offsets equal byte offsets and the cross-reference "
+    "table stays valid. No external library is used (the host is in China, where CDN-hosted "
+    "libraries are unreliable), and unlike `window.print()` it produces a real downloadable file. "
+    "The **Daily Brief** is a whole-console snapshot — it first loads the real catalog, audit log, "
+    "and admin roster, then reports today's KPIs plus a section per area (conversations, AI "
+    "quality, demand, sales, content, catalog, team, agent config, recent operations). The "
+    "**Analytics** report mirrors the Analytics tab. To extend either, add a section using the "
+    "builder's helpers (`heading`, `kpiGrid`, `bars`, `lineChart`, `table`, `donut`)."
 )
 PAGEBREAK()
 

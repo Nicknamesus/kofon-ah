@@ -3546,7 +3546,18 @@ function permissionsPage() {
         <h2>${msg("Create administrator", "新建管理员")}</h2>
         <form class="form-stack" data-form="user-create">
           <label><span>${msg("Email", "邮箱")}</span><input name="email" type="email" required placeholder="you@kofon.com" /></label>
-          <label><span>${msg("Password", "密码")}</span><input name="password" type="password" required /></label>
+          <label><span>${msg("Password", "密码")}</span>
+            <div class="password-field">
+              <input name="password" type="password" required />
+              <button type="button" class="password-toggle" data-action="toggle-password" aria-label="Show password">${msg("Show", "显示")}</button>
+            </div>
+          </label>
+          <label><span>${msg("Confirm password", "确认密码")}</span>
+            <div class="password-field">
+              <input name="password_confirm" type="password" required />
+              <button type="button" class="password-toggle" data-action="toggle-password" aria-label="Show password">${msg("Show", "显示")}</button>
+            </div>
+          </label>
           <label><span>${msg("Role", "角色")}</span>
             <select name="role">${selectableRoles.map((r) => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join("")}</select>
           </label>
@@ -3958,10 +3969,15 @@ root.addEventListener("submit", (event) => {
   if (form.dataset.form === "user-create") {
     const email = (form.email?.value || "").trim();
     const password = form.password?.value || "";
+    const passwordConfirm = form.password_confirm?.value || "";
     const role = form.role?.value || "viewer";
+    if (password !== passwordConfirm) {
+      showToast(msg("The two passwords don't match.", "两次输入的密码不一致。"));
+      return;
+    }
     const button = form.querySelector('button[type="submit"]');
     if (button) button.disabled = true;
-    apiForm("/admin/api/users/create", { email, password, role, csrf_token: state.csrf })
+    apiForm("/admin/api/users/create", { email, password, password_confirm: passwordConfirm, role, csrf_token: state.csrf })
       .then(() => {
         loadUsers();
         showToast(msg("Administrator saved.", "管理员已保存。"));
@@ -4248,11 +4264,10 @@ root.addEventListener("click", (event) => {
   }
   if (action === "user-delete") {
     const id = actionButton.dataset.user;
-    if (!window.confirm(msg("Delete this administrator account?", "确定要删除此管理员账号吗？"))) return;
-    // No delete endpoint yet: disable the account to revoke its access.
-    apiForm("/admin/api/users/toggle", { user_id: id, csrf_token: state.csrf })
-      .then(() => { loadUsers(); showToast(msg("Account removed.", "账号已删除。")); })
-      .catch(() => showToast(msg("Could not remove account.", "无法删除账号。")));
+    if (!window.confirm(msg("Permanently delete this administrator account?", "确定要永久删除此管理员账号吗？"))) return;
+    apiForm("/admin/api/users/delete", { user_id: id, csrf_token: state.csrf })
+      .then(() => { loadUsers(); showToast(msg("Account deleted.", "账号已删除。")); })
+      .catch(() => showToast(msg("Could not delete account.", "无法删除账号。")));
     return;
   }
   if (action === "backup-create") {

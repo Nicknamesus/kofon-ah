@@ -8,6 +8,7 @@
 <div class="banner err">
   {% if err == 'exists' %}That email already exists.
   {% elif err == 'invalid' %}Missing or invalid fields.
+  {% elif err == 'mismatch' %}The two passwords don't match.
   {% elif err == 'self' %}You can't disable your own account.
   {% elif err == 'lastadmin' %}Can't disable the last active superadmin.
   {% elif err == 'missing' %}User not found.

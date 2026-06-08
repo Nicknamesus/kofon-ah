@@ -23,7 +23,7 @@ from fastapi.responses import (
     RedirectResponse,
     StreamingResponse,
 )
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select, update
 
 from app.admin import audit, notify_bus, security
 from app.admin.deps import AdminContext, _client_ip, require_admin, require_csrf
@@ -184,9 +184,13 @@ async def users_create(request: Request, ctx: AdminContext = Depends(require_csr
     form = dict(await request.form())
     email = (form.get("email") or "").strip().lower()
     password = form.get("password") or ""
+    password_confirm = form.get("password_confirm")
     role = form.get("role") or ""
     if not email or not password or role not in security.ROLES:
         return RedirectResponse("/admin/users?err=invalid", status_code=303)
+    # When a confirmation is supplied (the UI sends it twice), the two must match.
+    if password_confirm is not None and password_confirm != password:
+        return RedirectResponse("/admin/users?err=mismatch", status_code=303)
     ip = _client_ip(request)
     try:
         async with SessionLocal() as session:
@@ -244,6 +248,48 @@ async def users_toggle(request: Request, ctx: AdminContext = Depends(require_csr
             session, user=ctx.user, action="user.toggle",
             entity_type="admin_users", entity_id=target.email,
             diff={"is_active": new_state}, ip=ip,
+        )
+        await session.commit()
+    return RedirectResponse("/admin/users", status_code=303)
+
+
+@router.post("/users/delete")
+async def users_delete(request: Request, ctx: AdminContext = Depends(require_csrf)):
+    _require(ctx, "users.manage")
+    form = dict(await request.form())
+    try:
+        user_id = int(form.get("user_id"))
+    except (TypeError, ValueError):
+        return RedirectResponse("/admin/users?err=invalid", status_code=303)
+    if user_id == ctx.user.id:
+        return RedirectResponse("/admin/users?err=self", status_code=303)
+
+    ip = _client_ip(request)
+    async with SessionLocal() as session:
+        target = (
+            await session.execute(select(AdminUser).where(AdminUser.id == user_id))
+        ).scalar_one_or_none()
+        if target is None:
+            return RedirectResponse("/admin/users?err=missing", status_code=303)
+        # Guard: never delete the last active superadmin.
+        if target.is_active and target.role == "superadmin":
+            others = (
+                await session.execute(
+                    select(func.count()).select_from(AdminUser).where(
+                        AdminUser.role == "superadmin",
+                        AdminUser.is_active.is_(True),
+                        AdminUser.id != target.id,
+                    )
+                )
+            ).scalar_one()
+            if others == 0:
+                return RedirectResponse("/admin/users?err=lastadmin", status_code=303)
+        # FK refs to admin_users are SET NULL / CASCADE, so the row deletes cleanly.
+        await session.execute(delete(AdminUser).where(AdminUser.id == user_id))
+        await audit.record(
+            session, user=ctx.user, action="user.delete",
+            entity_type="admin_users", entity_id=target.email,
+            diff={"role": target.role}, ip=ip,
         )
         await session.commit()
     return RedirectResponse("/admin/users", status_code=303)
